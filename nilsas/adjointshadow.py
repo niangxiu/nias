@@ -3,7 +3,6 @@ from scipy import sparse
 import scipy.sparse.linalg as splinalg
 
 from .timeseries import windowed_mean
-import pascal_lite as pascal
 
 class LssTangent:
     def __init__(self):
@@ -17,15 +16,9 @@ class LssTangent:
     def m_modes(self):
         return self.Rs[0].shape[0]
 
-    def checkpoint(self, V, v):
-        #Q, R = pascal.qr(V.T)
-        #b = pascal.dot(Q.T, v)
-        #V[:] = Q.T
-        #v -= pascal.dot(Q, b)
+    def rescale(self, V, v):
         Q, R = pascal.qr_transpose(V)
         b = pascal.dot(Q, v)
-        #V[:] = Q
-        #v -= pascal.dot(b, Q)
         V = Q
         v = v - pascal.dot(b, Q)
 
@@ -33,7 +26,8 @@ class LssTangent:
         self.bs.append(b)
         return V, v
 
-    def solve(self):
+    def solve_nilsas(self):
+        # this function solves the NILSAS problem, which is a least squares problem
         R, b = np.array(self.Rs), np.array(self.bs)
         assert R.ndim == 3 and b.ndim == 2
         assert R.shape[0] == b.shape[0]
@@ -46,14 +40,7 @@ class LssTangent:
         B = (D - I).tocsr()
         Schur = B * B.T #+ 1E-5 * sparse.eye(B.shape[0])
         alpha = -(B.T * splinalg.spsolve(Schur, np.ravel(b)))
-        # alpha1 = splinalg.lsqr(B, ravel(bs), iter_lim=10000)
         return alpha.reshape([nseg+1,-1])[:-1]
-
-    def solve_ivp(self):
-        a = [np.zeros(self.bs[0].shape)]
-        for i in range(len(self.bs)):
-            a.append(np.dot(self.Rs[i], a[-1]) + self.bs[i])
-        return array(a)[:-1]
 
     def lyapunov_exponents(self, segment_range=None):
         R = np.array(self.Rs)
