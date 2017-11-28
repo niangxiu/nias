@@ -37,7 +37,7 @@ def RK4(u, w, vstar):
     uwvs_new = uwvs + (k0 + 2*k1 + 2*k2 + k3) / 6.0
     return uwvs_new
 
-def solve_primal(u0, nsteps_per_seg):
+def solve_primal(u0, steps):
     # a function in the form
     # inputs  - u0:     init solution, a flat numpy array of doubles.
     #           steps:  number of time steps, an int.
@@ -46,7 +46,7 @@ def solve_primal(u0, nsteps_per_seg):
     #           Df:     Jacobian, shape (m, m, steps), where m is dimension of dynamical system
     #           Ju:     partial J/ partial u, shape (m, steps)
     
-    return u_end, J, Df, fs
+    return u_end, J, Df, Ju
 
 def solve_adjoint(w_tmn, vih_tmn, Df, fs):
     # inputs -  w_tmn:  terminal condition of homogeneous adjoint, of shape (M_modes, m)
