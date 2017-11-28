@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import shutil
 import sys
 
-sys.path.append("../nilsas/")
+sys.path.append("../")
 from nilsas import *
 
 def ddt(uwvs):
@@ -57,3 +57,12 @@ def solve_adjoint(w_tmn, vih_tmn, Df, fs):
     #           vih:    inhomogeneous solution on this segment, of shape (m, steps)
 
     return w, vih
+
+
+# the main function, now serves as test
+from nilsas.utility import qr_transpose
+A = np.array(np.random.rand(4,6))
+Q, R = qr_transpose(A)
+
+from nilsas.nilsas import adjoint_terminal_condition
+W, vih = adjoint_terminal_condition(2,3)

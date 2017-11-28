@@ -1,8 +1,8 @@
 from __future__ import division
 import sys
 import numpy as np
-import pascal_lite as pascal
-from multiprocessing import Pool
+# import pascal_lite as pascal
+# from multiprocessing import Pool
 from pdb import set_trace
 
 class TimeDilationBase:

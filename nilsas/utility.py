@@ -10,4 +10,3 @@ def qr_transpose(A):
     Q, R = np.linalg.qr(A.T)
     B = Q.T
     return B, R
-

@@ -3,8 +3,9 @@ from scipy import sparse
 import scipy.sparse.linalg as splinalg
 
 from .timeseries import windowed_mean
+from .utility import qr_transpose
 
-class LssTangent:
+class AdjointShadow:
     def __init__(self):
         self.Rs = []
         self.bs = []
@@ -16,17 +17,18 @@ class LssTangent:
     def m_modes(self):
         return self.Rs[0].shape[0]
 
-    def rescale(self, V, v):
-        Q, R = pascal.qr_transpose(V)
-        b = pascal.dot(Q, v)
-        V = Q
-        v = v - pascal.dot(b, Q)
+    def rescale(self, W, vih):
+        Q, R = qr_transpose(W)
+        b = np.dot(Q, vih)
+        W = Q
+        vih = vih - np.dot(b, Q)
 
-        self.Rs.append(R)
-        self.bs.append(b)
+        self.Rs.insert(0, R)
+        self.bs.insert(0, b)
         return V, v
 
     def solve_nilsas(self):
+        # todo:
         # this function solves the NILSAS problem, which is a least squares problem
         R, b = np.array(self.Rs), np.array(self.bs)
         assert R.ndim == 3 and b.ndim == 2
@@ -51,17 +53,19 @@ class LssTangent:
         return np.log(abs(diags))
 
     def lyapunov_covariant_vectors(self):
+        # might need further check
         exponents = self.lyapunov_exponents().mean(0)
         multiplier = np.exp(exponents)
-        vi = np.eye(self.m_modes())
-        v = [vi]
-        for Ri in reversed(self.Rs):
-            vi = np.linalg.solve(Ri, vi) * multiplier
-            v.insert(0, vi)
-        v = np.array(v)
-        return np.rollaxis(v, 2)
+        Ci = np.eye(self.m_modes())
+        C = [Ci]
+        for Ri in self.Rs:
+            Ci = np.linalg.solve(Ri, Ci) * multiplier
+            C.insert(0, Ci)
+        C = np.array(C)
+        return C # we do not roll axis here, unlike in Qiqi's fds!
 
     def lyapunov_covariant_magnitude_and_sin_angle(self):
+        # might need further check
         v = self.lyapunov_covariant_vectors()
         v_magnitude = np.sqrt((v**2).sum(2))
         vv = (v[:,np.newaxis] * v[np.newaxis,:]).sum(3)

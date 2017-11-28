@@ -4,9 +4,9 @@ import sys
 import numpy as np
 from copy import deepcopy
 
-from .checkpoint import Checkpoint, verify_checkpoint, save_checkpoint
-from .timedilation import TimeDilation, TimeDilationExact
-from .lsstan import LssTangent#, tangent_initial_condition
+# from .checkpoint import Checkpoint, verify_checkpoint, save_checkpoint
+# from .timedilation import TimeDilation, TimeDilationExact
+# from .lsstan import LssTangent#, tangent_initial_condition
 from .timeseries import windowed_mean
 
 def adjoint_terminal_condition(M_modes, m):
@@ -14,7 +14,8 @@ def adjoint_terminal_condition(M_modes, m):
     #           m: the dimension of the dynamical system
     # outputs - W: terminal conditions for homogeneous adjoint, shape (M_modes, m_dim)
     #           vih: terminal condition for inhomogeneous adjoint (zero), shape (m_dim)
-    W = np.random.rand(m, M_modes)
+    assert M_modes <= m, "number of modes should be smaller than dimension of system"
+    W = np.random.rand(M_modes, m)
     vih = np.zeros(m)
     return W, vih
 
