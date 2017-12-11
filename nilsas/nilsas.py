@@ -150,8 +150,9 @@ def adj_shadowing(
     #           Df:     Jacobian, shape (m, m, steps), where m is dimension of dynamical system
     #           Ju:     partial J/ partial u, shape (m, steps)
     # outputs - w:      homogeneous solutions on this segment, of shape (M_modes, m, steps)
-    #           vih:    inhomogeneous solution on this segment, of shape (m, steps)
-
+    #           ystar:  homogeneous solutions for generating the neutral adjoint CLV
+    #           vstar:  inhomogeneous solution on this segment, of shape (m, steps)
+    
     if runup_steps > 0:
         u0, _, _, _ = run_primal(u0, runup_steps)
 
