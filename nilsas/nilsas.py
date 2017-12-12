@@ -162,10 +162,9 @@ def adj_shadowing(
     #           vst_bgn:    inhomogeneous solution, of shape (m,)
     
     if runup_steps > 0:
-        u0, _, _, _ = run_primal(u0, runup_steps)
+        u0, f0, _, _, _, _ = run_primal(u0, runup_steps)
 
-    W, vih = adjoint_terminal_condition(M_modes, np.shape(u0)[0])
-    # stopped here
+    W, yst_tmn, vst_tmn = adjoint_terminal_condition(M_modes, f0[-1])
     lss = LssTangent()
     checkpoint = Checkpoint(u0, V, v, lss, [], [], [], [], [])
     return continue_shadowing(

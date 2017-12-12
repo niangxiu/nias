@@ -74,15 +74,10 @@ def solve_primal(u0, nsteps):
     Ju  = np.array(Ju)
     fs  = np.array(fs)
 
-    # plot for debug
-    # plt.plot(u[:,0], u[:,2])
-    # plt.savefig('lorenz.png')
-    # plt.close()
-    
     return u, f, J, fu, Ju, fs
 
 
-def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, fs):
+def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
     # inputs -  w_tmn:      terminal condition of homogeneous adjoint, of shape (M_modes, m)
     #           yst_tmn:    terminal condition of y^*, of shape (m,)
     #           vst_tmn:    terminal condition of v^*, of shape (m,)
@@ -92,9 +87,8 @@ def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, fs):
     #           yst:        y^*, for genereating neutral CLV, of shape (nsteps, m)
     #           vst:        inhomogeneous solution, of shape (nsteps, m)
 
-    assert fu.shape[0] == fs.shape[0]
-    assert fu.shape[1] == fu.shape[2]
-    assert fu.shape[1] == fs.shape[1]
+    assert fu.shape[0] == Ju.shape[0]
+    assert fu.shape[1] == fu.shape[2] == Ju.shape[1]
     nsteps = fu.shape[0] - 1
     M = w_tmn.shape[0]
     m = w_tmn.shape[1]
@@ -107,7 +101,6 @@ def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, fs):
     for i in range(nsteps-1, -1, -1):
         adjall_next = (np.dot(fu[i].T, adjall.T) * dt + adjall.T).T
         adjall_next[-1] += Ju[i] * dt
-        print(type(w))
         w.insert(0,adjall_next[:-2])
         yst.insert(0, adjall_next[-2])
         vst.insert(0, adjall_next[-1])
@@ -126,14 +119,3 @@ def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, fs):
 # A = np.array(np.random.rand(4,6))
 # Q, R = qr_transpose(A)
 
-
-u, f, J, fu, Ju, fs = solve_primal([0,1,5], 10)
-
-from nilsas.nilsas import adjoint_terminal_condition
-w_tmn, yst_tmn, vst_tmn = adjoint_terminal_condition(2, f[-1])
-# print(w_tmn, yst_tmn, vst_tmn)
-
-w, yst, vst = solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, fs)
-# print(w)
-# print(yst)
-# print(vst)
