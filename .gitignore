@@ -1,3 +1,6 @@
 *.png
 *.pyc
 ./nilsas/__pycache__/
+./apps/__pycache__/
+./tests/__pycache__/
+./.cache/
