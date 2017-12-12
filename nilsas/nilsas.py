@@ -8,16 +8,23 @@ from copy import deepcopy
 # from .timedilation import TimeDilation, TimeDilationExact
 # from .lsstan import LssTangent#, tangent_initial_condition
 from .timeseries import windowed_mean
+from .utility import qr_transpose
 
-def adjoint_terminal_condition(M_modes, m):
-    # inputs -  M_modes: number of homogeneous adjoint
-    #           m: the dimension of the dynamical system
-    # outputs - W: terminal conditions for homogeneous adjoint, shape (M_modes, m_dim)
-    #           vih: terminal condition for inhomogeneous adjoint (zero), shape (m_dim)
+def adjoint_terminal_condition(M_modes, f_tmn):
+    # inputs -  M_modes:    number of homogeneous adjoint
+    #           m:          the dimension of the dynamical system
+    #           f_tmn:      f at the end of the trajectory
+    
+    m = f_tmn.shape[0]
     assert M_modes <= m, "number of modes should be smaller than dimension of system"
-    W = np.random.rand(M_modes, m)
-    vih = np.zeros(m)
-    return W, vih
+
+    W_  = np.random.rand(M_modes, m)
+    W__ = W_ - np.dot(W_, f_tmn)[:,np.newaxis] * f_tmn / np.dot(f_tmn, f_tmn)
+    W,_ = qr_transpose(W__)
+    yst_tmn = f_tmn
+    vst_tmn = np.zeros(m)
+
+    return W, yst_tmn, vst_tmn
 
 
 def nilsas_gradient(checkpoint, segment_range=None):
@@ -145,13 +152,14 @@ def adj_shadowing(
     #           Ju:     partial J/ partial u, shape (m, steps)
     #
     # run_adjoint is a function in the form:
-    # inputs -  w_tmn:  terminal condition of homogeneous adjoint, of shape (M_modes, m)
-    #           vih_tmn:terminal condition of inhomogeneous adjoint, of shape (m,)
-    #           Df:     Jacobian, shape (m, m, steps), where m is dimension of dynamical system
-    #           Ju:     partial J/ partial u, shape (m, steps)
-    # outputs - w:      homogeneous solutions on this segment, of shape (M_modes, m, steps)
-    #           ystar:  homogeneous solutions for generating the neutral adjoint CLV
-    #           vstar:  inhomogeneous solution on this segment, of shape (m, steps)
+    # inputs -  w_tmn:      terminal condition of homogeneous adjoint, of shape (M_modes, m)
+    #           yst_tmn:    terminal condition of y^*, of shape (m,)
+    #           vst_tmn:    terminal condition of v^*, of shape (m,)
+    #           Df:         Jacobian, shape (m, m, steps), where m is dimension of dynamical system
+    #           Ju:         partial J/ partial u, shape (m, steps)
+    # outputs - w_bgn:      homogeneous solutions at the beginning of the segment, of shape (M_modes, m)
+    #           yst_bgn:    ystar, for genereating neutral CLV, of shape (m,)
+    #           vst_bgn:    inhomogeneous solution, of shape (m,)
     
     if runup_steps > 0:
         u0, _, _, _ = run_primal(u0, runup_steps)
