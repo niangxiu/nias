@@ -1,8 +1,7 @@
 from __future__ import division
 import numpy as np
-import sys
+import sys, os
 import pytest
-import os
 
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
