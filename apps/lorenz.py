@@ -87,8 +87,6 @@ def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
     #           yst:        y^*, for genereating neutral CLV, of shape (nsteps, m)
     #           vst:        inhomogeneous solution, of shape (nsteps, m)
 
-    assert fu.shape[0] == Ju.shape[0]
-    assert fu.shape[1] == fu.shape[2] == Ju.shape[1]
     nsteps = fu.shape[0] - 1
     M = w_tmn.shape[0]
     m = w_tmn.shape[1]

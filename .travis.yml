@@ -1,0 +1,17 @@
+language: python
+
+sudo: required
+dist: trusty
+
+python:
+    - 2.7
+    - 3.5
+
+install: 
+    - pip install -r requirements.txt
+
+script:
+    - py.test -v --cov=nilsas --cov=apps --cov-report term-missing
+
+after_success:
+    - coveralls
