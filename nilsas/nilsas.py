@@ -4,10 +4,6 @@ import sys
 import numpy as np
 from copy import deepcopy
 
-# from .checkpoint import Checkpoint, verify_checkpoint, save_checkpoint
-# from .timedilation import TimeDilation, TimeDilationExact
-# from .lsstan import LssTangent#, tangent_initial_condition
-from .timeseries import windowed_mean
 from .utility import qr_transpose
 
 def adjoint_terminal_condition(M_modes, f_tmn):
@@ -140,16 +136,19 @@ def continue_adj_shadowing(
 
 
 def adj_shadowing(
-        run_primal, run_adjoint, u0, parameter, M_modes, num_segments, 
+        run_forward, run_adjoint, u0, parameter, M_modes, num_segments, 
         steps_per_segment, runup_steps, checkpoint_path=None, checkpoint_interval=1):
 
-    # run_primal is a function in the form
+    # run_forward is a function in the form
     # inputs  - u0:     init solution, a flat numpy array of doubles.
     #           steps:  number of time steps, an int.
-    # outputs - u_end:  final solution, a flat numpy array of doubles, must be of the same size as u0.
-    #           J:      quantities of interest, a numpy array of shape (steps,)
-    #           Df:     Jacobian, shape (m, m, steps), where m is dimension of dynamical system
-    #           Ju:     partial J/ partial u, shape (m, steps)
+    # outputs - u:      shape (nstep, m), where m is dymension of dynamical system. Trajectory 
+    #           f:      shape (nstep, m). du/dt
+    #           fu:     shape (nstep, m, m). Jacobian matrices 
+    #           fs:     shape (nstep, m). pf/ps
+    #           J:      shape (nstep,).
+    #           Ju:     shape (nstep, m). pJ/pu
+    #           Js:     shape (nstep, m). pJ/ps
     #
     # run_adjoint is a function in the form:
     # inputs -  w_tmn:      terminal condition of homogeneous adjoint, of shape (M_modes, m)
@@ -162,7 +161,7 @@ def adj_shadowing(
     #           vst_bgn:    inhomogeneous solution, of shape (m,)
     
     if runup_steps > 0:
-        u0, f0, _, _, _, _ = run_primal(u0, runup_steps)
+        u0, f0, _, _, _, _ = run_forward(u0, runup_steps)
 
     W, yst_tmn, vst_tmn = adjoint_terminal_condition(M_modes, f0[-1])
     lss = LssTangent()

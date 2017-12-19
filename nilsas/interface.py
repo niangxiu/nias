@@ -7,10 +7,12 @@ from .utility import qr_transpose
 
 class AdjointShadow:
     def __init__(self):
-        self.Rs = []
-        self.bs = []
+        self.Rs     = []
+        self.bvs    = []
+        self.bys    = []
+        self.Cs     = []
 
-    def K_segments(self):
+    def K_egments(self):
         assert len(self.Rs) == len(self.bs)
         return len(self.Rs)
 

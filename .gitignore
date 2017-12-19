@@ -1,7 +1,8 @@
 *.png
 *.pyc
-./nilsas/__pycache__/
-./apps/__pycache__/
-./tests/__pycache__/
-./.cache/*
 .coverage
+nilsas/temp/
+nilsas/__pycache__/
+apps/__pycache__/
+tests/__pycache__/
+.cache/*

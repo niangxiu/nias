@@ -9,17 +9,19 @@ import sys
 sys.path.append("../")
 from nilsas import *
 
-sigma = 10
+# this application has two paramters: rho, sigma
+# the base for rho is 30
+# the base for sigma is 10
 beta = 8/3.0
 dt = 0.001
 
-def derivatives(u, rho):
+def derivatives(u, rho, sigma):
     [x, y, z] = u
     # f   = np.array([sigma * (y - x), x * (rho - z) - y, x * y - beta * z])
     J   = z
     fu  = np.array([[-sigma, sigma, 0], [rho - z, -1, -x], [y, x, -beta]])
     Ju  = np.array([0, 0, 1])
-    fs  = np.array([0, x, 0])
+    fs  = np.array([[0, x, 0], [y-x, 0, 0]])
     return J, fu, Ju, fs
 
 
@@ -29,65 +31,71 @@ def stepPTA(u, f, fu, rho):
     return u_next, f_next
 
 
-def solve_primal(u0, nsteps):
-    # a function in the form
-    # inputs  - u0:         init solution, a flat numpy array of doubles.
-    #           nsteps:     number of time steps, an int.
-    # outputs - u_end:      final solution, a flat numpy array of doubles, must be of the same size as u0.
-    #           J:          quantities of interest, a numpy array of shape (nsteps,)
-    #           fu:         Jacobian, shape (m, m, nsteps), where m is dimension of dynamical system
-    #           Ju:         partial J/ partial u, shape (m, nsteps)
-    
+def run_forward(u0, nstep, f0=None):
+    # run_forward is a function in the form
+    # inputs  - u0:     init solution, a flat numpy array of doubles.
+    #           steps:  number of time steps, an int.
+    # outputs - u:      shape (nstep, m), where m is dymension of dynamical system. Trajectory 
+    #           f:      shape (nstep, m). du/dt
+    #           fu:     shape (nstep, m, m). Jacobian matrices 
+    #           fs:     shape (nstep, ns, m). pf/ps
+    #           J:      shape (nstep,).
+    #           Ju:     shape (nstep, m). pJ/pu
+    #           Js:     shape (nstep, ns, m). pJ/ps
+
     rho = 30
-    u   = []
-    f   = []
-    J   = []
-    fu  = []
-    Ju  = []
-    fs  = []
+    sigma = 10
+    m   = 3
+    ns  = 2 # number of parameters
+
+    assert len(u0) == m
+    if f0 is not None:
+        assert len(f0) == m
+
+    u   = np.zeros([nstep+1, m])
+    f   = np.zeros([nstep+1, m])
+    fu  = np.zeros([nstep+1, m, m])
+    fs  = np.zeros([nstep+1, ns, m])
+    J   = np.zeros([nstep+1])
+    Ju  = np.zeros([nstep+1, m])
+    Js  = np.zeros([nstep+1, ns, m])
     
     # zeroth step value save
     [x,y,z] = u0
-    f0  = np.array([sigma * (y - x), x * (rho - z) - y, x * y - beta * z])
-    J_, fu_, Ju_, fs_ = derivatives(u0, rho)
-    u.append(u0)
-    f.append(f0)
-    J.append(J_)
-    fu.append(fu_)
-    Ju.append(Ju_)
-    fs.append(fs_)
+    if f0 is None:
+        f0  = np.array([sigma * (y - x), x * (rho - z) - y, x * y - beta * z])
+    J_, fu_, Ju_, fs_ = derivatives(u0, rho, sigma)
+    u[0]    = u0
+    f[0]    = f0
+    fu[0]   = fu_
+    fs[0]   = fs_
+    J[0]    = J_
+    Ju[0]   = Ju_
 
-    for i in range(nsteps):
-        u_next, f_next = stepPTA(u[-1], f[-1], fu[-1], rho)
-        J_, fu_, Ju_, fs_ = derivatives(u_next, rho)
-        u.append(u_next)
-        f.append(f_next)
-        J.append(J_)
-        fu.append(fu_)
-        Ju.append(Ju_)
-        fs.append(fs_)
+    for i in range(1, 1+nstep):
+        u_next, f_next = stepPTA(u[i-1], f[i-1], fu[i-1], rho)
+        J_, fu_, Ju_, fs_ = derivatives(u_next, rho, sigma)
+        u[i]    = u_next
+        f[i]    = f_next
+        fu[i]   = fu_
+        fs[i]   = fs_
+        J[i]    = J_
+        Ju[i]   = Ju_
 
-    u   = np.array(u)
-    f   = np.array(f)
-    J   = np.array(J)
-    fu  = np.array(fu)
-    Ju  = np.array(Ju)
-    fs  = np.array(fs)
-
-    return u, f, J, fu, Ju, fs
+    return u, f, fu, fs, J, Ju, Js
 
 
-def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
+def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
     # inputs -  w_tmn:      terminal condition of homogeneous adjoint, of shape (M_modes, m)
     #           yst_tmn:    terminal condition of y^*, of shape (m,)
     #           vst_tmn:    terminal condition of v^*, of shape (m,)
-    #           Df:         Jacobian, shape (nsteps, m, m), where m is dimension of dynamical system
-    #           Ju:         partial J/ partial u, shape (nsteps, m)
-    # outputs - w:          homogeneous solutions at the beginning of the segment, of shape (nsteps, M_modes, m)
-    #           yst:        y^*, for genereating neutral CLV, of shape (nsteps, m)
-    #           vst:        inhomogeneous solution, of shape (nsteps, m)
+    #           Df:         Jacobian, shape (nstep, m, m), where m is dimension of dynamical system
+    #           Ju:         partial J/ partial u, shape (nstep, m)
+    # outputs - w:          homogeneous solutions at the beginning of the segment, of shape (nstep, M_modes, m)
+    #           yst:        y^*, for genereating neutral CLV, of shape (nstep, m)
+    #           vst:        inhomogeneous solution, of shape (nstep, m)
 
-    nsteps = fu.shape[0] - 1
+    nstep = fu.shape[0] - 1
     M = w_tmn.shape[0]
     m = w_tmn.shape[1]
 
@@ -96,7 +104,7 @@ def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
     vst = [vst_tmn]
     adjall = np.vstack([w_tmn, yst_tmn, vst_tmn])
     
-    for i in range(nsteps-1, -1, -1):
+    for i in range(nstep-1, -1, -1):
         adjall_next = (np.dot(fu[i].T, adjall.T) * dt + adjall.T).T
         adjall_next[-1] += Ju[i] * dt
         w.insert(0,adjall_next[:-2])
@@ -109,11 +117,4 @@ def solve_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
     vst = np.array(vst)
 
     return w, yst, vst
-
-
-# the main function, now serves as test
-
-# from nilsas.utility import qr_transpose
-# A = np.array(np.random.rand(4,6))
-# Q, R = qr_transpose(A)
 
