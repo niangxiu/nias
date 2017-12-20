@@ -14,7 +14,7 @@ def qr_transpose(A):
     return B, R
 
 
-def remove_orth_projection(p, w)
+def remove_orth_projection(p, w):
     # removes from p its orthogonal projection onto span( w[j], j=... )
     # p:        shape(m,)
     # w:        shape(M, m)

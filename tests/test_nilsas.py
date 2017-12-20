@@ -22,7 +22,7 @@ def test_qr():
     assert np.allclose(np.dot(Q, Q.T), np.eye(R.shape[0]))
 
 
-from nilsas.nilsas import adjoint_terminal_condition
+from nilsas.interface import adjoint_terminal_condition
 def test_terminal_condition():
     M = 3
     m = 5

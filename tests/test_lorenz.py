@@ -10,7 +10,7 @@ my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
 
 from apps.lorenz import run_forward, run_adjoint 
-from nilsas.nilsas import adjoint_terminal_condition
+from nilsas.interface import adjoint_terminal_condition
 from nilsas.forward import Forward
 
 nstep  = 10000
