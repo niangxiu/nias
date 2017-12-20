@@ -86,14 +86,14 @@ def run_forward(u0, nstep, f0=None):
 
 
 def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
-    # inputs -  w_tmn:      terminal condition of homogeneous adjoint, of shape (M_modes, m)
-    #           yst_tmn:    terminal condition of y^*, of shape (m,)
-    #           vst_tmn:    terminal condition of v^*, of shape (m,)
-    #           Df:         Jacobian, shape (nstep, m, m), where m is dimension of dynamical system
-    #           Ju:         partial J/ partial u, shape (nstep, m)
-    # outputs - w:          homogeneous solutions at the beginning of the segment, of shape (nstep, M_modes, m)
-    #           yst:        y^*, for genereating neutral CLV, of shape (nstep, m)
-    #           vst:        inhomogeneous solution, of shape (nstep, m)
+    # inputs -  w_tmn:      shape (M_modes, m). Terminal conditions of homogeneous adjoint
+    #           yst_tmn:    shape (m,). Terminal condition of y^*_i
+    #           vst_tmn:    shape (m,). Terminal condition of v^*_i
+    #           fu:         shape (nstep, m, m). Jacobian
+    #           Ju:         shape (nstep, m). partial J/ partial u,
+    # outputs - w:          shape (nstep, M_modes, m). homogeneous solutions on the segment
+    #           yst:        shape (nstep, m). y^*, for genereating neutral CLV
+    #           vst:        shape (nstep, m). inhomogeneous solution
 
     nstep = fu.shape[0] - 1
     M = w_tmn.shape[0]

@@ -24,7 +24,7 @@ def trajectory():
     return run_forward(u0, nstep)
 
 
-def test_primal(trajectory):
+def test_run_primal(trajectory):
     u, f, fu, fs, J, Ju, Js = trajectory
     assert u.shape[0] == f.shape[0] == J.shape[0]  == fu.shape[0] == Ju.shape[0] == fs.shape[0] == nstep + 1
     assert u.shape[1] == f.shape[1] == fu.shape[1] == fu.shape[2] == Ju.shape[1] == fs.shape[2] == m
@@ -33,7 +33,7 @@ def test_primal(trajectory):
     assert 10   <= np.average(u[:,2]) <= 100
 
 
-def test_adjoint(trajectory):
+def test_run_adjoint(trajectory):
     u, f, fu, fs, J, Ju, Js = trajectory
     w_tmn, yst_tmn, vst_tmn = adjoint_terminal_condition(M, f[-1])
     w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju)

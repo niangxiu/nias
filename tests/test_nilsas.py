@@ -1,3 +1,6 @@
+# Tests on nilsas using some apps such as Lorenz 63 are also contained in this file, 
+# rather than in the app's corresponding test files
+
 from __future__ import division
 import numpy as np
 import sys, os
@@ -22,6 +25,16 @@ def test_qr():
     assert np.allclose(np.dot(Q, Q.T), np.eye(R.shape[0]))
 
 
+from nilsas.utility import remove_orth_projection
+def test_remove_orth_projection():
+    w       = np.random.rand(5,7)
+    q, _    = qr_transpose(w)
+    p       = np.random.rand(7)
+    p_new, b = remove_orth_projection(p, q)
+    assert np.allclose(p_new, p-np.dot(b,q))
+    assert np.allclose(np.zeros(5), np.dot(q,p_new))
+
+
 from nilsas.interface import adjoint_terminal_condition
 def test_terminal_condition():
     M = 3
@@ -41,3 +54,6 @@ def test_terminal_condition():
 
     # check vst_tmn is zero
     assert np.allclose(vst_tmn, np.zeros(m))
+
+
+from 

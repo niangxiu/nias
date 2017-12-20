@@ -19,7 +19,10 @@ class Forward:
         self.Ju    = []
         self.Js    = []
 
-    def run(self, run_forward, u0, nstep_per_segment, K_segments):
+    def run(self, run_forward, u0, nstep_per_segment, K_segments, runup_steps=0):
+        if runup_steps > 0:
+            u0, f0, _, _, _, _, _ = run_forward(u0, runup_steps)
+
         u, f, fu, fs, J, Ju, Js = run_forward(u0, nstep_per_segment)
         self.u.append(u)
         self.f.append(f)

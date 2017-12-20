@@ -14,15 +14,17 @@ def qr_transpose(A):
     return B, R
 
 
-def remove_orth_projection(p, w):
+def remove_orth_projection(p, q):
     # removes from p its orthogonal projection onto span( w[j], j=... )
+    # requires w[j] be an othonormal set
     # p:        shape(m,)
     # w:        shape(M, m)
     # b:        shape(M,)
     # p_new:    shape(m,)
-    assert w.ndim == 2
+    assert q.ndim == 2
     assert p.ndim == 1
-    assert p.shape[0] == w.shape[1] >= w.shape[0]
-    b = np.dot(w, p)
-    p_new = p - np.dot(b, w)
+    assert p.shape[0] == q.shape[1] >= q.shape[0]
+    assert np.allclose(np.dot(q, q.T), np.eye(q.shape[0]))
+    b = np.dot(q, p)
+    p_new = p - np.dot(b, q)
     return p_new, b
