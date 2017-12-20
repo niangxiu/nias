@@ -1,80 +1,76 @@
 import numpy as np
-from scipy import sparse
-import scipy.sparse.linalg as splinalg
+from .utility import qr_transpose, remove_orth_projection
 
-from .timeseries import windowed_mean
-from .utility import qr_transpose
+def adjoint_terminal_condition(M_modes, f_tmn):
+    # inputs -  M_modes:    number of homogeneous adjoint
+    #           m:          the dimension of the dynamical system
+    #           f_tmn:      f at the end of the trajectory
+    
+    m = f_tmn.shape[0]
+    assert M_modes <= m 
 
-class AdjointShadow:
+    W_  = np.random.rand(M_modes, m)
+    W__ = W_ - np.dot(W_, f_tmn)[:,np.newaxis] * f_tmn / np.dot(f_tmn, f_tmn)
+    w,_ = qr_transpose(W__)
+    yst_tmn = f_tmn
+    vst_tmn = np.zeros(m)
+
+    return w, yst_tmn, vst_tmn
+
+
+class Interface:
+
     def __init__(self):
-        self.Rs     = []
-        self.bvs    = []
-        self.bys    = []
-        self.Cs     = []
-
-    def K_egments(self):
-        assert len(self.Rs) == len(self.bs)
-        return len(self.Rs)
-
-    def m_modes(self):
-        return self.Rs[0].shape[0]
-
-    def rescale(self, W, vih):
-        Q, R = qr_transpose(W)
-        b = np.dot(Q, vih)
-        W = Q
-        vih = vih - np.dot(b, Q)
-
-        self.Rs.insert(0, R)
-        self.bs.insert(0, b)
-        return V, v
-
-    def solve_nilsas(self):
-        # todo:
-        # this function solves the NILSAS problem, which is a least squares problem
-        R, b = np.array(self.Rs), np.array(self.bs)
-        assert R.ndim == 3 and b.ndim == 2
-        assert R.shape[0] == b.shape[0]
-        assert R.shape[1] == R.shape[2] == b.shape[1]
-        nseg, subdim = b.shape
-        eyes = np.eye(subdim, subdim) * np.ones([nseg, 1, 1])
-        matrix_shape = (subdim * nseg, subdim * (nseg+1))
-        I = sparse.bsr_matrix((eyes, np.r_[1:nseg+1], np.r_[:nseg+1]))
-        D = sparse.bsr_matrix((R, np.r_[:nseg], np.r_[:nseg+1]), shape=matrix_shape)
-        B = (D - I).tocsr()
-        Schur = B * B.T #+ 1E-5 * sparse.eye(B.shape[0])
-        alpha = -(B.T * splinalg.spsolve(Schur, np.ravel(b)))
-        return alpha.reshape([nseg+1,-1])[:-1]
-
-    def lyapunov_exponents(self, segment_range=None):
-        R = np.array(self.Rs)
-        if segment_range is not None:
-            R = R[slice(*segment_range)]
-        i = np.arange(self.m_modes())
-        diags = R[:,i,i]
-        return np.log(abs(diags))
-
-    def lyapunov_covariant_vectors(self):
-        # might need further check
-        exponents = self.lyapunov_exponents().mean(0)
-        multiplier = np.exp(exponents)
-        Ci = np.eye(self.m_modes())
-        C = [Ci]
-        for Ri in self.Rs:
-            Ci = np.linalg.solve(Ri, Ci) * multiplier
-            C.insert(0, Ci)
-        C = np.array(C)
-        return C # we do not roll axis here, unlike in Qiqi's fds!
-
-    def lyapunov_covariant_magnitude_and_sin_angle(self):
-        # might need further check
-        v = self.lyapunov_covariant_vectors()
-        v_magnitude = np.sqrt((v**2).sum(2))
-        vv = (v[:,np.newaxis] * v[np.newaxis,:]).sum(3)
-        cos_angle = (vv / v_magnitude).transpose([1,0,2]) / v_magnitude
-        i = np.arange(cos_angle.shape[0])
-        cos_angle[i,i,:] = 1
-        sin_angle = np.sqrt(1 - cos_angle**2)
-        return v_magnitude, sin_angle
+        # Q <- w_right:             shape(K+1, M, m)
+        # R:                        shape(K+1, M, M)
+        # yst_left <- yst_right:    shape(K+1, m)
+        # vst_left <- vst_right:    shape(K+1, m)
+        # by, bv:                   shape(K+1, M)
+        self.w_right    = np.array([])
+        self.Q          = np.array([])
+        self.R          = np.array([])
+        self.yst_right  = np.array([])
+        self.yst_left   = np.array([])
+        self.by         = np.array([])
+        self.vst_right  = np.array([])
+        self.vst_left   = np.array([])
+        self.bv         = np.array([])
 
 
+    def terminal_right(self, M_modes, forward):
+        # get the right-of-interface values at t = t_n = T
+        assert a.shape == (0,)
+        w_right, yst_right, vst_right = adjoint_terminal_condition(M_modes, forward.f[-1,-1])
+        self.w_right    = w_right
+        self.yst_right  = yst_right
+        self.vst_right  = vst_right
+
+
+    def interface_right(self, segment ):
+        # get the right-of-interface values at t_i < T
+        # may not need this function if computer memory is running short
+        w_right         = segment.w[0,0]
+        yst_right       = segment.yst[0,0]
+        vst_right       = segment.vst[0,0]
+        self.w_right    = np.concatenate((w_right, self.w_right),       axis=0)
+        self.yst_right  = np.concatenate((yst_right, self.yst_right),   axis=0)
+        self.vst_right  = np.concatenate((vst_right, self.vst_right),   axis=0)
+
+
+    def rescale(self, w_right=None, yst_right=None, vst_right=None):
+        # compute left-of-interface values from right-of-interface values
+        if w_right is None:
+            Q, R         = qr_transpose(self.w_right[0])
+            yst_left, by = remove_orth_projection(self.yst_right[0])
+            vst_left, bv = remove_orth_projection(self.vst_right[0])
+        else:
+            Q, R         = qr_transpose(w_right)
+            yst_left, by = remove_orth_projection(yst_right)
+            vst_left, bv = remove_orth_projection(vst_right)
+
+        self.Q          = np.concatenate((Q, self.Q),   axis=0)
+        self.R          = np.concatenate((R, self.R),   axis=0)
+        self.yst_left   = np.concatenate((yst_left, self.yst_left), axis=0)
+        self.vst_left   = np.concatenate((vst_left, self.vst_left), axis=0)
+        self.by         = np.concatenate((by, self.by), axis=0)
+        self.bv         = np.concatenate((bv, self.bv), axis=0)

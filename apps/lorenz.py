@@ -117,4 +117,3 @@ def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
     vst = np.array(vst)
 
     return w, yst, vst
-

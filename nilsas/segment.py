@@ -1,50 +1,61 @@
-import os
-import pickle
-from collections import namedtuple
+import numpy as np
 
-Segment = namedtuple('Segment', 'u f fs J adjointbundle') # avb is acronym for adjoint vector bundle
+def get_C_cts(w):
+    # compute the covariant matrix using w on all time steps
+    # w is on a segment, shape (nstep_per_segment, M, m)
+    assert w.ndim == 3
+    assert w.shape[1] <= w.shape[2]
+    M_modes = w.shape[1]
+    C = np.zeros([M_modes, M_modes])
+    for i in range M_modes:
+        for j in range M_modes:
+            C[i,j] = np.sum( w[:, i, :] * w[:, j, :] )
+            C[j,i] = C[i,j]
+    return C
 
-def save_segment(sg_path, sg):
-    '''
-    save a segment file under the path sg_path,
-    naming convention is mXX_segmentYYY, where XX and YY are given by cp.lss
-    '''
-    filename = 'm{0}_segment{1}'.format(sg.adjointbundle.m_modes(), cp.adjointbundle.K_segments())
-    with open(os.path.join(checkpoint_path, filename), 'wb') as f:
-        pickle.dump(sg, f)
 
-def load_segment(sg_file):
-    return pickle.load(open(sg_file, 'rb'))
+def get_d_cts(w, p)
+    # p is either ystar or vstar, shape (nstep_per_segment, m)
+    assert p.ndim == 2
+    assert w.shape[2] == p.shape[1]
+    M_modes = w.shape[1]
+    d = np.zeros(M_modes)
+    for i in range(M_modes):
+        d[i] = np.sum( w[:, i, :] * p )
+    return d
 
-def verify_checkpoint(segment):
-    u, f, fs, J, adjointbundle = segment
-    return adjointbundle.K_segments() == len(u) \
-                            == len(f) \
-                            == len(fs) \
-                            == len(J)
 
-def load_last_segment(segment_path, m):
-    '''
-    load segment in path segment_path, with file name mXX_segmentYYY,
-    where XX matches the given m, and YY is the largest
-    '''
-    def m_modes(filename):
-        try:
-            m, _ = filename.split('_segment')
-            assert m.startswith('m')
-            return int(m[1:])
-        except:
-            return None
+class Segment:
 
-    def segments(filename):
-        try:
-            _, segments = filename.split('_segment')
-            return int(segments)
-        except:
-            return None
+    def __init__(self):
+        # w:        shape(K, nstep_per_segment, M, m)  
+        # yst, vst: shape(K, nstep_per_segment, m)
+        # C:        shape(K, nstep_per_segment, M, M)
+        # dy, dv:   shape(K, nstep_per_segment, M)
+        
+        self.w      = np.array([])
+        self.yst    = np.array([])
+        self.vst    = np.array([])
+        self.C      = np.array([])
+        self.dy     = np.array([])
+        self.dv     = np.array([])
 
-    files = filter(lambda f : m_modes(f) == m and segments(f) is not None,
-                   os.listdir(segment_path))
-    files = sorted(files, key=segments)
-    if len(files):
-        return load_checkpoint(os.path.join(segment_path, files[-1]))
+
+    def run1seg(self, run_adjoint, interface, forward):
+        w_tmn   = interface.Q[0]
+        yst_tmn = interface.yst_left[0]
+        vst_tmn = interface.vst_left[0]
+        fu      = forward.fu[0]
+        Ju      = forward.Ju[0]
+
+        w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju)
+        C   = get_C_cts(w)
+        dy  = get_d_cts(w, yst)
+        dv  = get_d_cts(w, vst)
+
+        self.w      = np.concatenate((w, self.w),     axis=0)
+        self.yst    = np.concatenate((yst, self.yst), axis=0)
+        self.vst    = np.concatenate((vst, self.vst), axis=0)
+        self.C      = np.concatenate((C, self.C),     axis=0)
+        self.dy     = np.concatenate((dy, self.dy),   axis=0)
+        self.dv     = np.concatenate((dv, self.dv),   axis=0)

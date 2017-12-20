@@ -1,7 +1,7 @@
-from collections import namedtuple
 import numpy as np
 
 class Forward:
+
     def __init__(self):
         # there is 1 objective and ns parameters
         # u:    shape(K, nstep_per_segment, m)

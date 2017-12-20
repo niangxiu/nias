@@ -4,24 +4,6 @@ import sys
 import numpy as np
 from copy import deepcopy
 
-from .utility import qr_transpose
-
-def adjoint_terminal_condition(M_modes, f_tmn):
-    # inputs -  M_modes:    number of homogeneous adjoint
-    #           m:          the dimension of the dynamical system
-    #           f_tmn:      f at the end of the trajectory
-    
-    m = f_tmn.shape[0]
-    assert M_modes <= m, "number of modes should be smaller than dimension of system"
-
-    W_  = np.random.rand(M_modes, m)
-    W__ = W_ - np.dot(W_, f_tmn)[:,np.newaxis] * f_tmn / np.dot(f_tmn, f_tmn)
-    W,_ = qr_transpose(W__)
-    yst_tmn = f_tmn
-    vst_tmn = np.zeros(m)
-
-    return W, yst_tmn, vst_tmn
-
 
 def nilsas_gradient(checkpoint, segment_range=None):
     # computes the gradient from checkpoints
@@ -55,7 +37,6 @@ def nilsas_gradient(checkpoint, segment_range=None):
 def continue_adj_shadowing(
         run, parameter, checkpoint, num_segments, steps_per_segment,
         checkpoint_path=None, checkpoint_interval=1):
-    # the true output of this function is the checkpoint files saved at each interfaces 
 
     compute_outputs = []
 
