@@ -1,4 +1,5 @@
 import numpy as np
+from .utility import stackv
 
 def get_C_cts(w):
     # compute the covariant matrix using w on all time steps
@@ -7,14 +8,14 @@ def get_C_cts(w):
     assert w.shape[1] <= w.shape[2]
     M_modes = w.shape[1]
     C = np.zeros([M_modes, M_modes])
-    for i in range M_modes:
-        for j in range M_modes:
+    for i in range(M_modes):
+        for j in range(M_modes):
             C[i,j] = np.sum( w[:, i, :] * w[:, j, :] )
             C[j,i] = C[i,j]
     return C
 
 
-def get_d_cts(w, p)
+def get_d_cts(w, p):
     # p is either ystar or vstar, shape (nstep_per_segment, m)
     assert p.ndim == 2
     assert w.shape[2] == p.shape[1]
@@ -53,9 +54,9 @@ class Segment:
         dy  = get_d_cts(w, yst)
         dv  = get_d_cts(w, vst)
 
-        self.w      = np.concatenate((w, self.w),     axis=0)
-        self.yst    = np.concatenate((yst, self.yst), axis=0)
-        self.vst    = np.concatenate((vst, self.vst), axis=0)
-        self.C      = np.concatenate((C, self.C),     axis=0)
-        self.dy     = np.concatenate((dy, self.dy),   axis=0)
-        self.dv     = np.concatenate((dv, self.dv),   axis=0)
+        self.w      = stackv(w,     self.w)
+        self.yst    = stackv(yst,   self.yst)
+        self.vst    = stackv(vst,   self.vst)
+        self.C      = stackv(C,     self.C)
+        self.dy     = stackv(dy,    self.dy)
+        self.dv     = stackv(dv,    self.dv)

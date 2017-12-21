@@ -28,3 +28,25 @@ def remove_orth_projection(p, q):
     b = np.dot(q, p)
     p_new = p - np.dot(b, q)
     return p_new, b
+
+
+def stackv(u, v):
+    
+    # basically np.vstack but
+    # 1. allow one of the argument be empty
+    # 2. add a newaxis for the arrays with 1 less dimension
+
+    if u.shape == (0,):
+        return v[np.newaxis]
+    elif v.shape == (0,):
+        return u[np.newaxis]
+    elif u.shape != (0,) and v.shape != (0,):
+        if u.shape[1:] == v.shape:
+            return np.concatenate((u, v[np.newaxis]), axis=0)
+        elif u.shape == v.shape[1:]:
+            return np.concatenate((u[np.newaxis], v), axis=0)
+        else:
+            raise ValueError('stackv two arrays of wrong shape')
+    else:
+        raise ValueError('stackv two empty arrays')
+

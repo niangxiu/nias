@@ -3,13 +3,13 @@ import os
 import sys
 import numpy as np
 from copy import deepcopy
-from forward import Forward
-from segment import Segment
-from interface import Interface, adjoint_terminal_condition
+from .forward import Forward
+from .segment import Segment
+from .interface import Interface, adjoint_terminal_condition
 
 def vector_bundle(
         run_forward, run_adjoint, u0, parameter, M_modes, K_segments, 
-        nstep_per_segment, runup_steps=0, checkpoint_path=None):
+        nstep_per_segment, runup_steps=0):
 
     # run_forward is a function in the form
     # inputs  - u0:     shape(m,). init solution.
@@ -33,12 +33,12 @@ def vector_bundle(
     #           vst:        shape (nstep, m). inhomogeneous solution
     
     forward = Forward()
-    forward.run(run_forward, u0, nstep_per_segment, K_segments, runup_steps)
+    forward.run(run_forward, u0, parameter, nstep_per_segment, K_segments, runup_steps)
 
     segment = Segment()
     interface = Interface()
-    interface.terminal_right(M_modes, forward)
-    interface.rescale()
+    interface.terminal(M_modes, forward)
+
     for i in range(K_segments):
         segment.run1seg(run_adjoint, interface, forward)
         interface.interface_right(segment)
@@ -47,7 +47,7 @@ def vector_bundle(
     return forward, interface, segment
 
 
-def nilsas_min:
+def nilsas_min():
     # solves the minimization problem for y or v,
     # obtain a_i 
     pass
@@ -82,5 +82,5 @@ def gradient(checkpoint, segment_range=None):
     return windowed_mean(grad_lss) + windowed_mean(grad_dil)
 
 
-def nilsas_main:
+def nilsas_main():
     pass

@@ -31,10 +31,11 @@ def stepPTA(u, f, fu, rho):
     return u_next, f_next
 
 
-def run_forward(u0, nstep, f0=None):
+def run_forward(u0, base_parameter, nstep, f0=None):
     # run_forward is a function in the form
-    # inputs  - u0:     init solution, a flat numpy array of doubles.
-    #           steps:  number of time steps, an int.
+    # inputs  - u0:     shape (m,). initial state
+    #           nstep:  scalar. number of time steps.
+    #           base_parameter: tuple (rho, sigma). 
     # outputs - u:      shape (nstep, m), where m is dymension of dynamical system. Trajectory 
     #           f:      shape (nstep, m). du/dt
     #           fu:     shape (nstep, m, m). Jacobian matrices 
@@ -43,8 +44,9 @@ def run_forward(u0, nstep, f0=None):
     #           Ju:     shape (nstep, m). pJ/pu
     #           Js:     shape (nstep, ns, m). pJ/ps
 
-    rho = 30
-    sigma = 10
+    rho, sigma = base_parameter
+    # rho = 30
+    # sigma = 10
     m   = 3
     ns  = 2 # number of parameters
 
@@ -86,9 +88,9 @@ def run_forward(u0, nstep, f0=None):
 
 
 def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
-    # inputs -  w_tmn:      shape (M_modes, m). Terminal conditions of homogeneous adjoint
-    #           yst_tmn:    shape (m,). Terminal condition of y^*_i
-    #           vst_tmn:    shape (m,). Terminal condition of v^*_i
+    # inputs -  w_tmn:      shape (M_modes, m). terminal conditions of homogeneous adjoint
+    #           yst_tmn:    shape (m,). terminal condition of y^*_i
+    #           vst_tmn:    shape (m,). terminal condition of v^*_i
     #           fu:         shape (nstep, m, m). Jacobian
     #           Ju:         shape (nstep, m). partial J/ partial u,
     # outputs - w:          shape (nstep, M_modes, m). homogeneous solutions on the segment

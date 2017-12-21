@@ -4,6 +4,7 @@
 from __future__ import division
 import numpy as np
 import sys, os
+import pytest
 
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
@@ -56,4 +57,47 @@ def test_terminal_condition():
     assert np.allclose(vst_tmn, np.zeros(m))
 
 
-from 
+from nilsas.nilsas import vector_bundle
+import apps.lorenz as lrz
+@pytest.fixture(scope ='module')
+def vecbd_lorenz():
+    u0          = [0,1,5]
+    parameter   = (30, 10)
+    M_modes     = 2
+    K_segment   = 40
+    nstep_per_segment   = 200
+    runup_steps = 4000
+    m           = 3
+
+    forward, interface, segment =  vector_bundle( 
+           lrz.run_forward, lrz.run_adjoint, u0, parameter, 
+           M_modes, K_segment, nstep_per_segment, runup_steps)
+
+    return forward, interface, segment, M_modes, m, K_segment, nstep_per_segment
+
+
+def test_forward(vecbd_lorenz):
+    # forward has member variables:
+    # u:    shape(K, nstep_per_segment, m)
+    # f:    shape(K, nstep_per_segment, m)
+    # fu:   shape(K, nstep_per_segment, m, m)
+    # fs:   shape(K, nstep_per_segment, ns, m)
+    # J:    shape(K, nstep_per_segment,)
+    # Ju:   shape(K, nstep_per_segment, m)
+    # Js:   shape(K, nstep_per_segment, ns)
+    fw, _, _, M_modes, m, K_segment, nstep_per_segment = vecbd_lorenz
+
+    # test shape
+    assert fw.u.shape[0] == fw.f.shape[0] == fw.fu.shape[0] == fw.fs.shape[0] \
+            == fw.J.shape[0] == fw.Ju.shape[0] == fw.Js.shape[0] == K_segment
+    assert fw.u.shape[1] == fw.f.shape[1] == fw.fu.shape[1] == fw.fs.shape[1] \
+            == fw.J.shape[1] == fw.Ju.shape[1] == fw.Js.shape[1] == nstep_per_segment + 1
+    assert fw.u.shape[2] == fw.f.shape[2] == fw.fu.shape[2] == fw.fs.shape[3] \
+            == fw.Ju.shape[2] == fw.fu.shape[3] == m
+    assert fw.fs.shape[2] == fw.Js.shape[2] # should be number of parameters
+
+
+def test_segment(vecbd_lorenz):
+    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment = vecbd_lorenz
+    # test shape
+    pass
