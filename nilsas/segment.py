@@ -31,8 +31,8 @@ class Segment:
     def __init__(self):
         # w:        shape(K, nstep_per_segment, M, m)  
         # yst, vst: shape(K, nstep_per_segment, m)
-        # C:        shape(K, nstep_per_segment, M, M)
-        # dy, dv:   shape(K, nstep_per_segment, M)
+        # C:        shape(K, M, M)
+        # dy, dv:   shape(K, M)
         
         self.w      = np.array([])
         self.yst    = np.array([])
@@ -42,18 +42,20 @@ class Segment:
         self.dv     = np.array([])
 
 
-    def run1seg(self, run_adjoint, interface, forward):
+    def run1seg(self, run_adjoint, interface, forward, dt):
+        j_current_segment = -(self.w.shape[0] + 1)
+
         w_tmn   = interface.Q[0]
         yst_tmn = interface.yst_left[0]
         vst_tmn = interface.vst_left[0]
-        fu      = forward.fu[0]
-        Ju      = forward.Ju[0]
+        fu      = forward.fu[j_current_segment]
+        Ju      = forward.Ju[j_current_segment]
 
-        w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju)
+        w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt)
         C   = get_C_cts(w)
         dy  = get_d_cts(w, yst)
         dv  = get_d_cts(w, vst)
-
+   
         self.w      = stackv(w,     self.w)
         self.yst    = stackv(yst,   self.yst)
         self.vst    = stackv(vst,   self.vst)

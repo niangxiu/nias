@@ -63,7 +63,7 @@ class Interface:
         assert self.w_right.ndim == 3
 
 
-    def interface_right(self, segment ):
+    def interface_right(self, segment):
         # get the right-of-interface values at t_i < T
         # may not need this function if computer memory is running short
         w_right         = segment.w[0,0]
@@ -74,16 +74,35 @@ class Interface:
         self.vst_right  = stackv(vst_right, self.vst_right)
 
 
-    def rescale(self, w_right=None, yst_right=None, vst_right=None):
+    def rescale(self, f_interface, w_right=None, yst_right=None, vst_right=None):
         # compute left-of-interface values from right-of-interface values
         if w_right is None:
-            Q, R         = qr_transpose(self.w_right[0])
-            yst_left, by = remove_orth_projection(self.yst_right[0], Q)
-            vst_left, bv = remove_orth_projection(self.vst_right[0], Q)
-        else:
-            Q, R         = qr_transpose(w_right)
-            yst_left, by = remove_orth_projection(yst_right, Q)
-            vst_left, bv = remove_orth_projection(vst_right, Q)
+            w_right         = self.w_right[0]
+            yst_right       = self.yst_right[0]
+            vst_right       = self.vst_right[0]
+
+        assert w_right.ndim == 2
+        assert f_interface.ndim == yst_right.ndim == vst_right.ndim == 1
+        assert np.allclose( np.dot(w_right, f_interface), \
+                np.zeros(w_right.shape[0]), \
+                atol = np.linalg.norm(f_interface) * 1e-8)
+
+        # for Q, we need to subtract unothorgonal errors
+        Q, R    = qr_transpose(w_right)
+        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]), \
+                atol = np.linalg.norm(f_interface) * 1e-8)
+        Q_      = Q \
+                - ((Q*f_interface[np.newaxis]).sum(axis=-1))[:,np.newaxis] \
+                * f_interface[np.newaxis] \
+                / np.dot(f_interface, f_interface) 
+        assert np.allclose(Q, Q_)
+        Q       = Q_
+        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]), \
+                atol = np.linalg.norm(f_interface) * 1e-8)
+        
+        yst_left, by = remove_orth_projection(yst_right, Q)
+        vst_left, bv = remove_orth_projection(vst_right, Q)
+
 
         self.Q          = stackv(Q,         self.Q)
         self.R          = stackv(R,         self.R)

@@ -19,10 +19,11 @@ m       = 3         # dimension of system
 M       = 2         # number of homogeneous adjoints
 ns      = 2         # number of parameters
 base_parameter = (30, 10)
+dt      = 0.001
 
 @pytest.fixture(scope="module")
 def trajectory():
-    return run_forward(u0, base_parameter, nstep)
+    return run_forward(u0, base_parameter, nstep, dt)
 
 
 def test_run_primal(trajectory):
@@ -37,7 +38,7 @@ def test_run_primal(trajectory):
 def test_run_adjoint(trajectory):
     u, f, fu, fs, J, Ju, Js = trajectory
     w_tmn, yst_tmn, vst_tmn = adjoint_terminal_condition(M, f[-1])
-    w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju)
+    w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt)
     assert w.shape[0] == yst.shape[0] == vst.shape[0] == nstep + 1
     assert w.shape[1] == M
     assert w.shape[2] == yst.shape[1] == vst.shape[1] == m

@@ -9,7 +9,7 @@ from .interface import Interface, adjoint_terminal_condition
 
 def vector_bundle(
         run_forward, run_adjoint, u0, parameter, M_modes, K_segments, 
-        nstep_per_segment, runup_steps=0):
+        nstep_per_segment, runup_steps, dt):
 
     # run_forward is a function in the form
     # inputs  - u0:     shape(m,). init solution.
@@ -33,16 +33,16 @@ def vector_bundle(
     #           vst:        shape (nstep, m). inhomogeneous solution
     
     forward = Forward()
-    forward.run(run_forward, u0, parameter, nstep_per_segment, K_segments, runup_steps)
+    forward.run(run_forward, u0, parameter, nstep_per_segment, K_segments,  runup_steps, dt)
 
     segment = Segment()
     interface = Interface()
     interface.terminal(M_modes, forward)
 
-    for i in range(K_segments):
-        segment.run1seg(run_adjoint, interface, forward)
+    for i in range(K_segments-1, -1, -1):
+        segment.run1seg(run_adjoint, interface, forward, dt)
         interface.interface_right(segment)
-        interface.rescale()
+        interface.rescale(forward.f[i,0])
 
     return forward, interface, segment
 

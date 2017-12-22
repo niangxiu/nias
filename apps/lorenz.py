@@ -12,8 +12,8 @@ from nilsas import *
 # this application has two paramters: rho, sigma
 # the base for rho is 30
 # the base for sigma is 10
+# the largest time step allowed for PTA forward Euler: dt = 0.001
 beta = 8/3.0
-dt = 0.001
 
 def derivatives(u, rho, sigma):
     [x, y, z] = u
@@ -25,13 +25,13 @@ def derivatives(u, rho, sigma):
     return J, fu, Ju, fs
 
 
-def stepPTA(u, f, fu, rho):
+def stepPTA(u, f, fu, rho, dt):
     u_next = u + f * dt
     f_next = f + np.dot(fu, f) * dt
     return u_next, f_next
 
 
-def run_forward(u0, base_parameter, nstep, f0=None):
+def run_forward(u0, base_parameter, nstep, dt, f0=None):
     # run_forward is a function in the form
     # inputs  - u0:     shape (m,). initial state
     #           nstep:  scalar. number of time steps.
@@ -75,7 +75,7 @@ def run_forward(u0, base_parameter, nstep, f0=None):
     Ju[0]   = Ju_
 
     for i in range(1, 1+nstep):
-        u_next, f_next = stepPTA(u[i-1], f[i-1], fu[i-1], rho)
+        u_next, f_next = stepPTA(u[i-1], f[i-1], fu[i-1], rho, dt)
         J_, fu_, Ju_, fs_ = derivatives(u_next, rho, sigma)
         u[i]    = u_next
         f[i]    = f_next
@@ -87,7 +87,7 @@ def run_forward(u0, base_parameter, nstep, f0=None):
     return u, f, fu, fs, J, Ju, Js
 
 
-def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju):
+def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt):
     # inputs -  w_tmn:      shape (M_modes, m). terminal conditions of homogeneous adjoint
     #           yst_tmn:    shape (m,). terminal condition of y^*_i
     #           vst_tmn:    shape (m,). terminal condition of v^*_i

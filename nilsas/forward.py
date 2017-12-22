@@ -19,12 +19,12 @@ class Forward:
         self.Ju    = []
         self.Js    = []
 
-    def run(self, run_forward, u0, base_parameter, nstep_per_segment, K_segments, runup_steps=0):
+    def run(self, run_forward, u0, base_parameter, nstep_per_segment, K_segments, runup_steps, dt):
         if runup_steps > 0:
-            u, f0, _, _, _, _, _ = run_forward(u0, base_parameter, runup_steps)
+            u, f0, _, _, _, _, _ = run_forward(u0, base_parameter, runup_steps, dt)
         u0 = u[-1]
 
-        u, f, fu, fs, J, Ju, Js = run_forward(u0, base_parameter,  nstep_per_segment)
+        u, f, fu, fs, J, Ju, Js = run_forward(u0, base_parameter, nstep_per_segment, dt)
         self.u.append(u)
         self.f.append(f)
         self.fu.append(fu)
@@ -33,7 +33,7 @@ class Forward:
         self.Ju.append(Ju)
         self.Js.append(Js)
         for i in range(1, K_segments):
-            u, f, fu, fs, J, Ju, Js = run_forward(self.u[-1][-1], base_parameter, nstep_per_segment, f0 = self.f[-1][-1])
+            u, f, fu, fs, J, Ju, Js = run_forward(self.u[-1][-1], base_parameter, nstep_per_segment, dt, f0 = self.f[-1][-1])
             self.u.append(u)
             self.f.append(f)
             self.fu.append(fu)
