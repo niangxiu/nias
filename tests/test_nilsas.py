@@ -117,14 +117,18 @@ def test_segment(vecbd_lorenz):
             == m
 
     # check satisfy governing equation
-    w = sg.w[0]
-    vst = sg.vst[0]
-    yst = sg.yst[0]
-    fu = fw.fu[0]  # shape(nsteps, m, m)
+    w = sg.w[0]     # shape(nstep, M, m)
+    vst = sg.vst[0] # shape(nstep, m)
+    yst = sg.yst[0] # shape(nstep, m)
+    fu = fw.fu[0]   # shape(nstep, m, m)
     Ju = fw.Ju[0]
     f  = fw.f[0]
     assert np.allclose( (w[1:] - w[:-1]) / dt, \
-            (-fu[:-1,np.newaxis,:,:] * w[1:,:,:,np.newaxis]).sum(axis=-2)  )
+            (-fu[:-1,np.newaxis,:,:] * w[1:,:,:,np.newaxis]).sum(axis=-2) )
+    assert np.allclose( (yst[1:] - yst[:-1]) / dt, \
+            (-fu[:-1] * yst[1:,:,np.newaxis]).sum(axis=-2) )
+    assert np.allclose( (vst[1:] - vst[:-1]) / dt, \
+            (-fu[:-1] * vst[1:,:,np.newaxis]).sum(axis=-2) - Ju[:-1] )
 
 
 def test_interface_terminal(vecbd_lorenz):
@@ -162,7 +166,7 @@ def test_segment_interface_continuous(vecbd_lorenz):
 
 def test_orthogonal_w_f(vecbd_lorenz):
     fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
-    for i in range(-1, -K_segment-1, -1):
+    for i in range(K_segment):
         w   = sg.w[i]
         vst = sg.vst[i]
         yst = sg.yst[i]
@@ -171,3 +175,14 @@ def test_orthogonal_w_f(vecbd_lorenz):
         f   = fw.f[i]
         _   = (w * f[:,np.newaxis,:]).sum(axis=-1)
         assert np.allclose( _, np.zeros(_.shape) )
+
+
+def test_rescale(vecbd_lorenz):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+    for i in range(K_segment + 1):
+        Q   = itf.Q[i]          # shape(M_modes, m)
+        vst = itf.vst_left[i]   # shape(m,)
+        yst = itf.yst_left[i]   # shape(m,)
+        assert np.allclose(np.dot(Q, Q.T), np.eye(Q.shape[0]))
+        assert np.allclose(np.dot(Q, vst), np.zeros(Q.shape[0]))
+        assert np.allclose(np.dot(Q, yst), np.zeros(Q.shape[0]))
