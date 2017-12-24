@@ -2,6 +2,8 @@ from __future__ import division
 import os
 import sys
 import numpy as np
+from scipy import sparse
+import scipy.sparse.linalg as splinalg
 from copy import deepcopy
 from .forward import Forward
 from .segment import Segment
@@ -49,12 +51,14 @@ def vector_bundle(
 
 def nilsas_min(C, R, d, b):
     # solves the minimization problem for y or v, obtain coefficients a
-
     K_segment, M_modes = d.shape
     assert type(C) == type(R) == type(d) == type(b) == np.ndarray
     assert C.ndim == 3 and R.ndim == 3 and d.ndim == 2 and b.ndim == 2
-    assert C.shape[0] == R.shape[0] == d.shape[0] == b.shape[0] == K_segment
-    assert C.shape[1] == c.shape[2] == R.shape[1] == R.shape[2] == d.shape[1] == b.shape[1] == M_modes
+    assert C.shape[0] == R.shape[0]-1 == d.shape[0] == b.shape[0]-1 == K_segment
+    assert C.shape[1] == C.shape[2] == R.shape[1] == R.shape[2] == d.shape[1] == b.shape[1] == M_modes
+
+    R = R[1:-1] # do not need first and last interface
+    b = b[1:-1]
 
     eyes    = np.eye(M_modes, M_modes) * np.ones([K_segment-1, 1, 1])
     B_shape = (M_modes * (K_segment-1), M_modes * K_segment)
@@ -65,6 +69,8 @@ def nilsas_min(C, R, d, b):
     Cinv    = np.array([np.linalg.inv(C[i]) for i in range(K_segment)])
     C       = sparse.bsr_matrix((C,     np.r_[:K_segment],  np.r_[:K_segment+1]))
     Cinv    = sparse.bsr_matrix((Cinv,  np.r_[:K_segment],  np.r_[:K_segment+1]))
+    C       = C.tocsr()
+    Cinv    = Cinv.tocsr()
 
     d       = np.ravel(d)
     b       = np.ravel(b)
@@ -73,7 +79,7 @@ def nilsas_min(C, R, d, b):
     lbd     = - splinalg.spsolve(Schur, B*Cinv*d + b)
     a       = - Cinv * (B.T * lbd + d) 
     assert len(a) == K_segment * M_modes
-    return a.reshape([K_segment, M_modes])
+    return a.reshape([K_segment, M_modes]), C, Cinv, B
 
 
 def gradient(checkpoint, segment_range=None):
