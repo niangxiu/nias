@@ -8,7 +8,7 @@ from .segment import Segment
 from .interface import Interface, adjoint_terminal_condition
 
 def vector_bundle(
-        run_forward, run_adjoint, u0, parameter, M_modes, K_segments, 
+        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
         nstep_per_segment, runup_steps, dt):
 
     # run_forward is a function in the form
@@ -33,13 +33,13 @@ def vector_bundle(
     #           vst:        shape (nstep, m). inhomogeneous solution
     
     forward = Forward()
-    forward.run(run_forward, u0, parameter, nstep_per_segment, K_segments,  runup_steps, dt)
+    forward.run(run_forward, u0, parameter, nstep_per_segment, K_segment,  runup_steps, dt)
 
     segment = Segment()
     interface = Interface()
     interface.terminal(M_modes, forward)
 
-    for i in range(K_segments-1, -1, -1):
+    for i in range(K_segment-1, -1, -1):
         segment.run1seg(run_adjoint, interface, forward, dt)
         interface.interface_right(segment)
         interface.rescale(forward.f[i,0])
@@ -47,10 +47,33 @@ def vector_bundle(
     return forward, interface, segment
 
 
-def nilsas_min():
-    # solves the minimization problem for y or v,
-    # obtain a_i 
-    pass
+def nilsas_min(C, R, d, b):
+    # solves the minimization problem for y or v, obtain coefficients a
+
+    K_segment, M_modes = d.shape
+    assert type(C) == type(R) == type(d) == type(b) == np.ndarray
+    assert C.ndim == 3 and R.ndim == 3 and d.ndim == 2 and b.ndim == 2
+    assert C.shape[0] == R.shape[0] == d.shape[0] == b.shape[0] == K_segment
+    assert C.shape[1] == c.shape[2] == R.shape[1] == R.shape[2] == d.shape[1] == b.shape[1] == M_modes
+
+    eyes    = np.eye(M_modes, M_modes) * np.ones([K_segment-1, 1, 1])
+    B_shape = (M_modes * (K_segment-1), M_modes * K_segment)
+    I       = sparse.bsr_matrix((eyes,  np.r_[:K_segment-1],    np.r_[:K_segment]), shape=B_shape)
+    D       = sparse.bsr_matrix((R,     np.r_[1:K_segment],     np.r_[:K_segment]))
+    B       = (I - D).tocsr()
+
+    Cinv    = np.array([np.linalg.inv(C[i]) for i in range(K_segment)])
+    C       = sparse.bsr_matrix((C,     np.r_[:K_segment],  np.r_[:K_segment+1]))
+    Cinv    = sparse.bsr_matrix((Cinv,  np.r_[:K_segment],  np.r_[:K_segment+1]))
+
+    d       = np.ravel(d)
+    b       = np.ravel(b)
+
+    Schur   = B * Cinv * B.T 
+    lbd     = - splinalg.spsolve(Schur, B*Cinv*d + b)
+    a       = - Cinv * (B.T * lbd + d) 
+    assert len(a) == K_segment * M_modes
+    return a.reshape([K_segment, M_modes])
 
 
 def gradient(checkpoint, segment_range=None):

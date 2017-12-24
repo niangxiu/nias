@@ -100,7 +100,6 @@ class Interface:
         yst_left, by = remove_orth_projection(yst_right, Q)
         vst_left, bv = remove_orth_projection(vst_right, Q)
 
-
         self.Q          = stackv(Q,         self.Q)
         self.R          = stackv(R,         self.R)
         self.yst_left   = stackv(yst_left,  self.yst_left)

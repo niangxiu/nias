@@ -31,11 +31,9 @@ def remove_orth_projection(p, q):
 
 
 def stackv(u, v):
-    
     # basically np.vstack on two arrays, but
     # 1. allow one of the argument be empty
     # 2. add a newaxis for the arrays with 1 less dimension
-
     if u.shape == (0,):
         return v[np.newaxis]
     elif v.shape == (0,):
