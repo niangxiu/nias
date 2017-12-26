@@ -5,6 +5,10 @@ import numpy as np
 from scipy import sparse
 import scipy.sparse.linalg as splinalg
 from copy import deepcopy
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 from .forward import Forward
 from .segment import Segment
 from .interface import Interface, adjoint_terminal_condition
@@ -82,34 +86,34 @@ def nilsas_min(C, R, d, b):
     return a.reshape([K_segment, M_modes]), C, Cinv, B
 
 
-def gradient(checkpoint, segment_range=None):
+def gradient(forward, segment):
     # computes the gradient from checkpoints
     # inputs -  segment_range: the checkpoints to be used for sensitivity
-    # outputs - the sensitivity
-
-    _, _, _, lss, G_lss, g_lss, J, G_dil, g_dil = checkpoint
-    if segment_range is not None:
-        lss = deepcopy(lss)
-        if isinstance(segment_range, int):
-            s = slice(segment_range)
-        else:
-            s = slice(*segment_range)
-        lss.bs = lss.bs[s]
-        lss.Rs = lss.Rs[s]
-        G_lss  = G_lss [s]
-        g_lss  = g_lss [s]
-        J      = J     [s]
-        G_dil  = G_dil [s]
-        g_dil  = g_dil [s]
-    alpha = lss.solve()
-    grad_lss = (alpha[:,:,np.newaxis] * np.array(G_lss)).sum(1) + np.array(g_lss)
-    J = np.array(J)
-    dJ = trapez_mean(J.mean(0), 0) - J[:,-1]
-    nstep_per_segment = J.shape[1]
-    dil = ((alpha * G_dil).sum(1) + g_dil) / nstep_per_segment
-    grad_dil = dil[:,np.newaxis] * dJ
-    return windowed_mean(grad_lss) + windowed_mean(grad_dil)
+    K_segment, nstep_per_segment, _ = forward.f.shape
+    grad = (segment.v[:,:,np.newaxis,:] * forward.fs).sum((0,1,3)) \
+            / K_segment / nstep_per_segment
+    return grad
 
 
-def nilsas_main():
-    pass
+def nilsas_main(
+        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
+        nstep_per_segment, runup_steps, dt):
+    
+    # get vector bundles
+    forward, interface, segment =  vector_bundle( 
+            run_forward, run_adjoint, u0, parameter, 
+            M_modes, K_segment, nstep_per_segment, runup_steps, dt)
+ 
+    # solve nilsas problem for y, then compute y, v^pm, d^v
+    ay, _, _, _ = nilsas_min(segment.C, interface.R, segment.dy, interface.by )
+    segment.y_vstpm_dv(ay, forward.f)
+
+    # solve nilsas problem for v
+    av, _, _, _ = nilsas_min(segment.C, interface.R, segment.dv, interface.bv)
+    segment.vpm_v(av, forward.f, forward.Jtild)
+
+    # compute gradient
+    grad = gradient(forward, segment)
+
+    return grad
+

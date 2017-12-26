@@ -1,10 +1,14 @@
 # Tests on nilsas using some apps such as Lorenz 63 are also contained in this file, 
 # rather than in the app's corresponding test files
+# tests on v and y are in test_nilsas.py
 
 from __future__ import division
 import numpy as np
 import sys, os
 import pytest
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
@@ -71,6 +75,12 @@ def test_forward(vecbd_lorenz):
             == fw.Ju.shape[2] == fw.fu.shape[3] == m
     assert fw.fs.shape[2] == fw.Js.shape[2] # should be number of parameters
 
+    # plot y
+    fig = plt.figure()
+    plt.plot(np.linalg.norm(fw.f.reshape([-1,3]), axis=-1))
+    plt.savefig('fnorm.png')
+    plt.close(fig)
+
 
 def test_segment(vecbd_lorenz):
     fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
@@ -80,12 +90,12 @@ def test_segment(vecbd_lorenz):
     # C:        shape(K, M, M)
     # dy, dv:   shape(K, M)
     assert sg.w.shape[0] == sg.yst.shape[0] == sg.vst.shape[0] \
-            == sg.C.shape[0] == sg.dy.shape[0] == sg.dv.shape[0] \
+            == sg.C.shape[0] == sg.dy.shape[0] == sg.dv_.shape[0] \
             == K_segment
     assert sg.w.shape[1] == sg.yst.shape[1] == sg.vst.shape[1] \
             == nstep_per_segment+1
     assert sg.w.shape[2] == sg.C.shape[1] == sg.C.shape[2] \
-            == sg.dy.shape[1] == sg.dv.shape[1] \
+            == sg.dy.shape[1] == sg.dv_.shape[1] \
             == M_modes
     assert sg.w.shape[3] == sg.yst.shape[2] == sg.vst.shape[2] \
             == m

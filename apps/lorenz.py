@@ -7,7 +7,7 @@ import shutil
 import sys
 
 sys.path.append("../")
-from nilsas import *
+from nilsas.nilsas import nilsas_main
 
 # this application has two paramters: rho, sigma
 # the base for rho is 30
@@ -119,3 +119,20 @@ def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt):
     vst = np.array(vst)
 
     return w, yst, vst
+
+
+if __name__ == '__main__':
+    # parameters
+    u0          = [0,1,5]
+    parameter   = (30, 10)
+    M_modes     = 2
+    K_segment   = 40
+    nstep_per_segment   = 500
+    runup_steps = 4000
+    dt          = 0.001
+    
+    grad = nilsas_main(
+        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
+        nstep_per_segment, runup_steps, dt)
+
+    print(grad)

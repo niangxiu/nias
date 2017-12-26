@@ -16,6 +16,7 @@ class Forward:
         self.fu    = []
         self.fs    = []
         self.J     = []
+        self.Jtild = []
         self.Ju    = []
         self.Js    = []
 
@@ -41,6 +42,7 @@ class Forward:
             self.J.append(J)
             self.Ju.append(Ju)
             self.Js.append(Js)
+
         self.u  = np.array(self.u)
         self.f  = np.array(self.f)
         self.fu = np.array(self.fu)
@@ -48,3 +50,5 @@ class Forward:
         self.J  = np.array(self.J)
         self.Ju = np.array(self.Ju)
         self.Js = np.array(self.Js)
+
+        self.Jtild  = self.J - np.average(self.J)
