@@ -92,7 +92,8 @@ def gradient(forward, segment):
     K_segment, nstep_per_segment, _ = forward.f.shape
     grad = (segment.v[:,:,np.newaxis,:] * forward.fs).sum((0,1,3)) \
             / K_segment / nstep_per_segment
-    return grad
+    Javg = np.average(forward.J)
+    return Javg, grad
 
 
 def nilsas_main(
@@ -113,7 +114,7 @@ def nilsas_main(
     segment.vpm_v(av, forward.f, forward.Jtild)
 
     # compute gradient
-    grad = gradient(forward, segment)
+    Javg, grad = gradient(forward, segment)
 
-    return grad
+    return Javg, grad
 

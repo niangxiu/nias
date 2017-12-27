@@ -88,14 +88,14 @@ class Interface:
 
         # for Q, we need to subtract unothorgonal errors
         Q, R    = qr_transpose(w_right)
-        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]) )
+        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]), atol = 1e-8 * np.linalg.norm(f_interface) )
         Q_      = Q \
                 - ((Q*f_interface[np.newaxis]).sum(axis=-1))[:,np.newaxis] \
                 * f_interface[np.newaxis] \
                 / np.dot(f_interface, f_interface) 
         assert np.allclose(Q, Q_)
         Q       = Q_
-        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]) )
+        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]), atol = 1e-8 * np.linalg.norm(f_interface) )
         
         yst_left, by = remove_orth_projection(yst_right, Q)
         vst_left, bv = remove_orth_projection(vst_right, Q)

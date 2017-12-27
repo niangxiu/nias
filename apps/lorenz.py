@@ -121,18 +121,36 @@ def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt):
     return w, yst, vst
 
 
-if __name__ == '__main__':
-    # parameters
-    u0          = [0,1,5]
-    parameter   = (30, 10)
+if __name__ == '__main__': # pragma: no cover
+
+    # parameters (rho, sigma)
     M_modes     = 2
     K_segment   = 40
     nstep_per_segment   = 500
-    runup_steps = 4000
-    dt          = 0.001
-    
-    grad = nilsas_main(
-        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, dt)
+    runup_steps = 10000
+    dt          = 0.0008
 
-    print(grad)
+    Javg_   = []
+    rho_    = []
+    grad_   = []
+    for rho in range (10, 50):
+        u0          = np.random.rand(3) * 40
+        parameter   = (rho, 10)
+        Javg, grad = nilsas_main(
+            run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
+            nstep_per_segment, runup_steps, dt)
+        print(rho, Javg, grad)
+        rho_.append(rho)
+        Javg_.append(Javg) 
+        grad_.append(grad)
+
+    fig = plt.figure()
+    plt.plot(rho_, Javg_)
+    plt.savefig('rho_J.png')
+    plt.close(fig)
+
+    fig = plt.figure()
+    plt.plot(rho_, grad_)
+    plt.savefig('rho_grad.png')
+    plt.close(fig)
+

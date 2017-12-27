@@ -77,10 +77,10 @@ def test_y(vecbd_lorenz_v):
     assert np.allclose((yst*f).sum(-1), (y*f).sum(-1))
     assert not np.allclose(yst, y)
     # plot y
-    fig = plt.figure()
-    plt.plot(np.linalg.norm(y.reshape([-1,3]), axis=-1))
-    plt.savefig('ynorm.png')
-    plt.close(fig)
+    # fig = plt.figure()
+    # plt.plot(np.linalg.norm(y.reshape([-1,3]), axis=-1))
+    # plt.savefig('ynorm.png')
+    # plt.close(fig)
 
 
 def test_vstpm_dv(vecbd_lorenz_v):
@@ -149,7 +149,7 @@ def test_nilsas_main(vecbd_lorenz_v):
     runup_steps = 4000
     dt          = 0.001
     
-    grad = nilsas_main(
+    Javg, grad = nilsas_main(
         run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
         nstep_per_segment, runup_steps, dt)
 

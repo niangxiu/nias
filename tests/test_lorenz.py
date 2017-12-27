@@ -14,7 +14,7 @@ from nilsas.interface import adjoint_terminal_condition
 from nilsas.forward import Forward
 
 nstep  = 10000
-u0      = [0,1,5]
+u0      = [1,3,5]
 m       = 3         # dimension of system
 M       = 2         # number of homogeneous adjoints
 ns      = 2         # number of parameters
@@ -27,12 +27,23 @@ def trajectory():
 
 
 def test_run_primal(trajectory):
+    
     u, f, fu, fs, J, Ju, Js = trajectory
     assert u.shape[0] == f.shape[0] == J.shape[0]  == fu.shape[0] == Ju.shape[0] == fs.shape[0] == nstep + 1
     assert u.shape[1] == f.shape[1] == fu.shape[1] == fu.shape[2] == Ju.shape[1] == fs.shape[2] == m
     assert fs.shape[1] == ns
     assert -20  <= np.average(u[:,0]) <= 20
     assert 10   <= np.average(u[:,2]) <= 100
+
+    # fig = plt.figure()
+    # plt.plot(u[:,0], u[:,1])
+    # plt.savefig('lorenz_x_y.png')
+    # plt.close(fig)    
+
+    # fig = plt.figure()
+    # plt.plot(u[:,0], u[:,2])  
+    # plt.savefig('lorenz_x_z.png')
+    # plt.close(fig)    
 
 
 def test_run_adjoint(trajectory):

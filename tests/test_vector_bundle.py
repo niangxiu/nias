@@ -75,11 +75,11 @@ def test_forward(vecbd_lorenz):
             == fw.Ju.shape[2] == fw.fu.shape[3] == m
     assert fw.fs.shape[2] == fw.Js.shape[2] # should be number of parameters
 
-    # plot y
-    fig = plt.figure()
-    plt.plot(np.linalg.norm(fw.f.reshape([-1,3]), axis=-1))
-    plt.savefig('fnorm.png')
-    plt.close(fig)
+    # plot f
+    # fig = plt.figure()
+    # plt.plot(np.linalg.norm(fw.f.reshape([-1,3]), axis=-1))
+    # plt.savefig('fnorm.png')
+    # plt.close(fig)
 
 
 def test_segment(vecbd_lorenz):
