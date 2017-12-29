@@ -12,9 +12,11 @@ import matplotlib.pyplot as plt
 
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
-
-
 from nilsas.interface import adjoint_terminal_condition
+from nilsas.nilsas import vector_bundle
+import apps.lorenz as lorenz
+
+
 def test_terminal_condition():
     M = 3
     m = 5
@@ -35,10 +37,8 @@ def test_terminal_condition():
     assert np.allclose(vst_tmn, np.zeros(m))
 
 
-from nilsas.nilsas import vector_bundle
-import apps.lorenz as lrz
 @pytest.fixture(scope ='module')
-def vecbd_lorenz():
+def vecbd_lorenz_explicit():
     u0          = [0,1,5]
     parameter   = (30, 10)
     M_modes     = 2
@@ -49,13 +49,14 @@ def vecbd_lorenz():
     dt          = 0.001
 
     forward, interface, segment =  vector_bundle( 
-           lrz.run_forward, lrz.run_adjoint, u0, parameter, 
-           M_modes, K_segment, nstep_per_segment, runup_steps, dt)
+           lorenz.run_forward, lorenz.run_adjoint, u0, parameter, 
+           M_modes, K_segment, nstep_per_segment, runup_steps, dt,
+           lorenz.step_PTA, lorenz.adjoint_step_explicit)
 
     return forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt
 
 
-def test_forward(vecbd_lorenz):
+def test_forward_explicit(vecbd_lorenz_explicit):
     # forward has member variables:
     # u:    shape(K, nstep_per_segment, m)
     # f:    shape(K, nstep_per_segment, m)
@@ -64,7 +65,7 @@ def test_forward(vecbd_lorenz):
     # J:    shape(K, nstep_per_segment,)
     # Ju:   shape(K, nstep_per_segment, m)
     # Js:   shape(K, nstep_per_segment, ns)
-    fw, _, _, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+    fw, _, _, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
 
     # test shape
     assert fw.u.shape[0] == fw.f.shape[0] == fw.fu.shape[0] == fw.fs.shape[0] \
@@ -82,8 +83,8 @@ def test_forward(vecbd_lorenz):
     # plt.close(fig)
 
 
-def test_segment(vecbd_lorenz):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+def test_segment(vecbd_lorenz_explicit):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     # check shape
     # w:        shape(K, nstep_per_segment, M, m)  
     # yst, vst: shape(K, nstep_per_segment, m)
@@ -115,8 +116,8 @@ def test_segment(vecbd_lorenz):
             (-fu[:-1] * vst[1:,:,np.newaxis]).sum(axis=-2) - Ju[:-1] )
 
 
-def test_interface_terminal(vecbd_lorenz):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+def test_interface_terminal(vecbd_lorenz_explicit):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     w_tmn   = itf.w_right[-1]
     yst_tmn = itf.yst_right[-1]
     vst_tmn = itf.vst_right[-1]
@@ -137,8 +138,8 @@ def test_interface_terminal(vecbd_lorenz):
     assert np.allclose(itf.vst_left[-1],    itf.vst_right[-1])
 
 
-def test_segment_interface_continuous(vecbd_lorenz):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+def test_segment_interface_continuous(vecbd_lorenz_explicit):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     assert np.allclose(itf.w_right[:-1],    sg.w[:,0])
     assert np.allclose(itf.Q[1:],           sg.w[:,-1])
     assert np.allclose(itf.yst_right[:-1],  sg.yst[:,0])
@@ -148,8 +149,8 @@ def test_segment_interface_continuous(vecbd_lorenz):
     assert np.allclose(fw.f[1:,0],          fw.f[:-1,-1])
 
 
-def test_orthogonal_w_f(vecbd_lorenz):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+def test_orthogonal_w_f(vecbd_lorenz_explicit):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     for i in range(K_segment):
         w   = sg.w[i]
         vst = sg.vst[i]
@@ -161,8 +162,8 @@ def test_orthogonal_w_f(vecbd_lorenz):
         assert np.allclose( _, np.zeros(_.shape) )
 
 
-def test_rescale(vecbd_lorenz):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+def test_rescale(vecbd_lorenz_explicit):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     for i in range(K_segment + 1):
         Q   = itf.Q[i]          # shape(M_modes, m)
         vst = itf.vst_left[i]   # shape(m,)

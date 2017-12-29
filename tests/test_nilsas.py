@@ -10,11 +10,13 @@ import matplotlib.pyplot as plt
 
 my_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(my_path, '..'))
-from .test_vector_bundle import vecbd_lorenz
+from .test_vector_bundle import vecbd_lorenz_explicit
+from nilsas.nilsas import nilsas_min, nilsas_main
+import apps.lorenz as lorenz
 
-from nilsas.nilsas import nilsas_min
-def test_nilsas_matrix(vecbd_lorenz):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+
+def test_nilsas_matrix(vecbd_lorenz_explicit):
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     ay, C, Cinv, B = nilsas_min( sg.C, itf.R, sg.dy, itf.by ) 
 
     assert B.shape == ((K_segment-1)*M_modes, K_segment*M_modes)
@@ -50,9 +52,9 @@ def test_nilsas_min():
 
 
 @pytest.fixture(scope='module')
-def vecbd_lorenz_v(vecbd_lorenz):
+def vecbd_lorenz_v(vecbd_lorenz_explicit):
     # provide a vector bundle where the segment has y, vstpm, dv, vpm, v
-    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz
+    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
     ay, _, _, _ = nilsas_min(segment.C, interface.R, segment.dy, interface.by )
     segment.y_vstpm_dv(ay, forward.f)
     av, _, _, _ = nilsas_min(segment.C, interface.R, segment.dv, interface.bv)
@@ -138,9 +140,7 @@ def test_v(vecbd_lorenz_v):
     # plt.close(fig)
 
 
-from nilsas.nilsas import nilsas_main
-from apps.lorenz import run_forward, run_adjoint
-def test_nilsas_main(vecbd_lorenz_v):
+def test_nilsas_main():
     u0          = [0,1,5]
     parameter   = (30, 10)
     M_modes     = 2
@@ -150,7 +150,8 @@ def test_nilsas_main(vecbd_lorenz_v):
     dt          = 0.001
     
     Javg, grad = nilsas_main(
-        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, dt)
+        lorenz.run_forward, lorenz.run_adjoint, u0, parameter, M_modes,
+        K_segment, nstep_per_segment, runup_steps, dt, 
+        lorenz.step_PTA, lorenz.adjoint_step_explicit)
 
     assert 0.8 <= grad[0] <= 1.2

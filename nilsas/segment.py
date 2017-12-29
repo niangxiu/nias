@@ -55,7 +55,7 @@ class Segment:
         # self.y, vstpm, dv, vpm, v
 
 
-    def run1seg(self, run_adjoint, interface, forward, dt):
+    def run1seg(self, run_adjoint, interface, forward, dt, stepfunc):
         j_current_segment = -(self.w.shape[0] + 1)
 
         w_tmn   = interface.Q[0]
@@ -64,7 +64,7 @@ class Segment:
         fu      = forward.fu[j_current_segment]
         Ju      = forward.Ju[j_current_segment]
 
-        w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt)
+        w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt, stepfunc)
         C   = get_C_cts(w)
         dy  = get_d_cts(w, yst)
         dv_ = get_d_cts(w, vst)
