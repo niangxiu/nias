@@ -131,4 +131,4 @@ def nilsas_main(
     # compute gradient
     Javg, grad = gradient(forward, segment)
 
-    return Javg, grad
+    return Javg, grad, forward, interface, segment

@@ -32,13 +32,13 @@ def step_PTA(u, f, fu, rho, dt, sigma):
 
 def step_PTA_backward_Euler(u, f, fu, rho, dt, sigma):
     f_next = np.linalg.solve(np.eye(3) - fu*dt, f) 
-    u_next = u + f_next * dt
+    u_next = u + f*dt
     return u_next, f_next
 
 
 def dudt(u, rho, sigma):
     [x, y, z] = u
-    f = np.array([sigma * (y - x), x * (rho - z) - y, x * y - beta * z])
+    f = np.array([sigma*(y-x), x*(rho-z)-y, x*y-beta*z])
     return f
 
 
@@ -159,10 +159,10 @@ if __name__ == '__main__': # pragma: no cover
 
     # parameters (rho, sigma)
     M_modes = 1
-    nstep_per_segment = 100
+    nstep_per_segment = 1000
     runup_steps = 10000
     dt = 0.01
-    K_segment = 100
+    K_segment = 2
     rho = 28
     sigma = 10
     u0 = [0,1,2]
@@ -172,9 +172,19 @@ if __name__ == '__main__': # pragma: no cover
     Javg_   = []
     grad_   = []
 
+    # trial run
+    # Javg, grad, forward, interface, segment = nilsas_main(
+            # run_forward, run_adjoint, u0, parameter, M_modes,
+            # K_segment, nstep_per_segment, runup_steps, dt, 
+            # step_RK4, adjoint_step_explicit)
+    
+    # plt.plot((forward.f*segment.y).sum(-1).flat)
+    # plt.savefig('fy.png')
+    # plt.close()
+
     # plot trajectory
     # fig = plt.figure()
-   # plt.plot(, Javg_, '.')
+    # plt.plot(, Javg_, '.')
     # plt.savefig('rho_J.png')
     # plt.close(fig)
 
@@ -205,32 +215,33 @@ if __name__ == '__main__': # pragma: no cover
     # plt.close(fig)
 
     # plot different trajectory length
-    K_segment_ = np.array([1e1, 2e1, 5e1], dtype=int) #, 1e3, 2e3, 5e3, 1e4, 2e4])
-    T_ = K_segment_ * dt * nstep_per_segment
-    for K_segment, T in zip(K_segment_, T_):
-        Javg__ = []
-        grad__ = []
-        for _ in range(n_repeat):
-            u0 = np.random.rand(3) * 20
-            Javg, grad = nilsas_main(
-                run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
-                nstep_per_segment, runup_steps, dt, stepfunc=step_RK4)
-            print(K_segment, Javg, grad)
-            Javg__.append(Javg)
-            grad__.append(grad)
-        Javg_.append(np.array(Javg__)) 
-        grad_.append(np.array(grad__))
-    Javg_ = np.array(Javg_)
-    grad_ = np.array(grad_)
+    # K_segment_ = np.array([100], dtype=int) #, 1e3, 2e3, 5e3, 1e4, 2e4])
+    # T_ = K_segment_ * dt * nstep_per_segment
+    # for K_segment, T in zip(K_segment_, T_):
+        # Javg__ = []
+        # grad__ = []
+        # for _ in range(n_repeat):
+            # u0 = np.random.rand(3) * 20
+            # Javg, grad, forward, interface, segment = nilsas_main(
+                # run_forward, run_adjoint, u0, parameter, M_modes,
+                # K_segment, nstep_per_segment, runup_steps, dt, 
+                # step_RK4, adjoint_step_explicit)
+            # print(K_segment, Javg, grad)
+            # Javg__.append(Javg)
+            # grad__.append(grad)
+        # Javg_.append(np.array(Javg__)) 
+        # grad_.append(np.array(grad__))
+    # Javg_ = np.array(Javg_)
+    # grad_ = np.array(grad_)
 
-    fig = plt.figure()
-    plt.semilogx(T_, Javg_, '.')
-    plt.savefig('T_J.png')
-    plt.close(fig)
+    # fig = plt.figure()
+    # plt.semilogx(T_, Javg_, '.')
+    # plt.savefig('T_J.png')
+    # plt.close(fig)
 
-    fig = plt.figure()
-    plt.semilogx(T_, grad_[:,:,0], '.')
-    plt.savefig('T_grad.png')
-    plt.close(fig)
+    # fig = plt.figure()
+    # plt.semilogx(T_, grad_[:,:,0], '.')
+    # plt.savefig('T_grad.png')
+    # plt.close(fig)
 
 

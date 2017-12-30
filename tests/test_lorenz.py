@@ -61,7 +61,8 @@ def test_run_adjoint(trajectory):
 
 @pytest.fixture(scope="module")
 def trajectory_implicit():
-    nstep  = 100000
+    # this implicit scheme comes to a fake stable point if nstep=1e5
+    nstep  = 1000
     u0      = [1,3,5]
     m       = 3         # dimension of system
     M       = 2         # number of homogeneous adjoints
