@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import shutil
 import sys
 
@@ -158,11 +159,11 @@ def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt, stepfunc):
 if __name__ == '__main__': # pragma: no cover
 
     # parameters (rho, sigma)
-    M_modes = 1
-    nstep_per_segment = 1000
+    M_modes = 3
+    nstep_per_segment = 100
     runup_steps = 10000
     dt = 0.01
-    K_segment = 2
+    K_segment = 100
     rho = 28
     sigma = 10
     u0 = [0,1,2]
@@ -173,20 +174,29 @@ if __name__ == '__main__': # pragma: no cover
     grad_   = []
 
     # trial run
-    # Javg, grad, forward, interface, segment = nilsas_main(
-            # run_forward, run_adjoint, u0, parameter, M_modes,
-            # K_segment, nstep_per_segment, runup_steps, dt, 
-            # step_RK4, adjoint_step_explicit)
+    Javg, grad, forward, interface, segment = nilsas_main(
+            run_forward, run_adjoint, u0, parameter, M_modes,
+            K_segment, nstep_per_segment, runup_steps, dt, 
+            step_RK4, adjoint_step_explicit)
     
     # plt.plot((forward.f*segment.y).sum(-1).flat)
-    # plt.savefig('fy.png')
-    # plt.close()
+    fig = plt.subplot(2,2,1)
+    plt.plot(np.linalg.norm(segment.y, axis=-1).flat)
+    plt.title('ynorm')
 
     # plot trajectory
-    # fig = plt.figure()
-    # plt.plot(, Javg_, '.')
-    # plt.savefig('rho_J.png')
-    # plt.close(fig)
+    fig = plt.subplot(2,2,2)
+    plt.plot(forward.u[:,:,0].flat, forward.u[:,:,2].flat,)
+    plt.title('x_z')
+
+    # plot trajectory
+    fig = plt.subplot(2,2,3)
+    plt.plot(np.linalg.norm(forward.f, axis=-1).flat)
+    plt.title('fnorm')
+
+    plt.savefig('plots.png')
+    plt.close(fig)
+
 
     # plot different rho
     # rho_    = []

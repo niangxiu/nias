@@ -149,7 +149,7 @@ def test_nilsas_main():
     runup_steps = 4000
     dt          = 0.001
     
-    Javg, grad = nilsas_main(
+    Javg, grad, _, _, _ = nilsas_main(
         lorenz.run_forward, lorenz.run_adjoint, u0, parameter, M_modes,
         K_segment, nstep_per_segment, runup_steps, dt, 
         lorenz.step_PTA, lorenz.adjoint_step_explicit)

@@ -81,11 +81,11 @@ class Segment:
         assert ay.shape == self.dy.shape
         assert f.shape  == self.vst.shape
 
-        self.y      = self.yst \
+        self.y = self.yst \
                 + (self.w * ay[:,np.newaxis,:,np.newaxis]).sum(axis=-2)
-        self.vstpm  = self.vst \
+        self.vstpm = self.vst \
                 - ((f*self.vst).sum(axis=-1) / (f*self.y).sum(axis=-1))[:,:,np.newaxis] * self.y
-        self.dv     = get_d_cts_all_seg(self.w, self.vstpm)
+        self.dv = get_d_cts_all_seg(self.w, self.vstpm)
 
 
     def vpm_v(self, av, f, Jtild):

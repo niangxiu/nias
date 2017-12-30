@@ -24,7 +24,7 @@ def remove_orth_projection(p, q):
     assert q.ndim == 2
     assert p.ndim == 1
     assert p.shape[0] == q.shape[1] >= q.shape[0]
-    assert np.allclose(np.dot(q, q.T), np.eye(q.shape[0]), atol=5e-3)
+    assert np.allclose(np.dot(q, q.T), np.eye(q.shape[0]), atol=5e-6)
     b = np.dot(q, p)
     p_new = p - np.dot(b, q)
     return p_new, b
