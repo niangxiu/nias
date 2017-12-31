@@ -46,3 +46,9 @@ def stackv(u, v):
             return np.concatenate((u, v[np.newaxis]), axis=0)
         elif u.shape == v.shape[1:]:
             return np.concatenate((u[np.newaxis], v), axis=0)
+
+
+def angle(u, v):
+    return 180 / np.pi * np.arccos((u*v).sum(-1)
+            /np.linalg.norm(u, axis=-1)
+            /np.linalg.norm(v, axis=-1)) 

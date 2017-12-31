@@ -16,7 +16,7 @@ def get_C_cts(w):
 
 
 def get_d_cts(w, p):
-    # p is either ystar or vstar, shape (nstep_per_segment, m)
+    # p is either vstar, shape (nstep_per_segment, m)
     assert p.ndim == 2
     assert w.shape[2] == p.shape[1]
     M_modes = w.shape[1]
@@ -41,56 +41,36 @@ def get_d_cts_all_seg(w, p):
 class Segment:
 
     def __init__(self):
-        # w:        shape(K, nstep_per_segment, M, m)  
-        # yst, vst: shape(K, nstep_per_segment, m)
-        # C:        shape(K, M, M)
-        # dy, dv_:  shape(K, M)
+        # w: shape(K, nstep_per_segment, M, m)  
+        # vst, v: shape(K, nstep_per_segment, m)
+        # C: shape(K, M, M)
+        # dv: shape(K, M)
         
-        self.w      = np.array([])
-        self.yst    = np.array([])
-        self.vst    = np.array([])
-        self.C      = np.array([])
-        self.dy     = np.array([])
-        self.dv_    = np.array([]) # not the pm component, only for debug 
-        # self.y, vstpm, dv, vpm, v
+        self.w = np.array([])
+        self.vst = np.array([])
+        self.C = np.array([])
+        self.dv = np.array([]) 
 
 
     def run1seg(self, run_adjoint, interface, forward, dt, stepfunc):
         j_current_segment = -(self.w.shape[0] + 1)
 
         w_tmn   = interface.Q[0]
-        yst_tmn = interface.yst_left[0]
         vst_tmn = interface.vst_left[0]
         fu      = forward.fu[j_current_segment]
         Ju      = forward.Ju[j_current_segment]
 
-        w, yst, vst = run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt, stepfunc)
-        C   = get_C_cts(w)
-        dy  = get_d_cts(w, yst)
-        dv_ = get_d_cts(w, vst)
+        w, vst = run_adjoint(w_tmn, vst_tmn, fu, Ju, dt, stepfunc)
+        C = get_C_cts(w)
+        dv = get_d_cts(w, vst)
    
-        self.w      = stackv(w,     self.w)
-        self.yst    = stackv(yst,   self.yst)
-        self.vst    = stackv(vst,   self.vst)
-        self.C      = stackv(C,     self.C)
-        self.dy     = stackv(dy,    self.dy)
-        self.dv_    = stackv(dv_,   self.dv_)
+        self.w = stackv(w,     self.w)
+        self.vst = stackv(vst,   self.vst)
+        self.C = stackv(C,     self.C)
+        self.dv = stackv(dv,   self.dv)
 
     
-    def y_vstpm_dv(self, ay, f):
-        assert ay.shape == self.dy.shape
-        assert f.shape  == self.vst.shape
-
-        self.y      = self.yst \
-                + (self.w * ay[:,np.newaxis,:,np.newaxis]).sum(axis=-2)
-        self.vstpm  = self.vst \
-                - ((f*self.vst).sum(axis=-1) / (f*self.y).sum(axis=-1))[:,:,np.newaxis] * self.y
-        self.dv     = get_d_cts_all_seg(self.w, self.vstpm)
-
-
-    def vpm_v(self, av, f, Jtild):
+    def get_v(self, av, f, Jtild):
         assert av.shape == self.dy.shape
-        self.vpm    = self.vstpm \
+        self.v = self.vst\
                 + (self.w * av[:,np.newaxis,:,np.newaxis]).sum(axis=-2)
-        self.v      = self.vpm \
-                - (Jtild / (f*self.y).sum(axis=-1))[:,:,np.newaxis] * self.y

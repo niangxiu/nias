@@ -32,14 +32,12 @@ def vector_bundle(
     # run_adjoint is a function in the form:
     # inputs -  w_tmn:      shape (M_modes, m). 
     #                       Terminal conditions of homogeneous adjoint
-    #           yst_tmn:    shape (m,). Terminal condition of y^*_i
     #           vst_tmn:    shape (m,). Terminal condition of v^*_i
     #           fu:         shape (nstep, m, m). Jacobian
     #           Ju:         shape (nstep, m). partial J/ partial u,
     # outputs - w:          shape (nstep, M_modes, m).
     #                       homogeneous solutions on the segment
-    #           yst:        shape (nstep, m). y^* for genereating neutral CLV
-    #           vst:        shape (nstep, m). inhomogeneous solution
+    #           vst: shape (nstep, m). inhomogeneous solution
     
     forward = Forward()
     forward.run(run_forward, u0, parameter, nstep_per_segment, 
@@ -118,15 +116,10 @@ def nilsas_main(
             K_segment, nstep_per_segment, runup_steps, dt,
             stepfwfunc, stepsegfunc)
  
-    # solve nilsas problem for y, then compute y, v^pm, d^v
-    ay, _, _, _ = nilsas_min(segment.C, interface.R, 
-            segment.dy, interface.by )
-    segment.y_vstpm_dv(ay, forward.f)
-
     # solve nilsas problem for v
     av, _, _, _ = nilsas_min(segment.C, interface.R, 
             segment.dv, interface.bv)
-    segment.vpm_v(av, forward.f, forward.Jtild)
+    segment.get_v(av, forward.f, forward.Jtild)
 
     # compute gradient
     Javg, grad = gradient(forward, segment)

@@ -8,14 +8,16 @@ def adjoint_terminal_condition(M_modes, f_tmn):
     
     m = f_tmn.shape[0]
     assert M_modes <= m 
+    assert f_tmn.ndim == 1
 
-    W_  = np.random.rand(M_modes, m)
-    W__ = W_ - np.dot(W_, f_tmn)[:,np.newaxis] * f_tmn / np.dot(f_tmn, f_tmn)
-    w,_ = qr_transpose(W__)
-    yst_tmn = f_tmn
+    f_unit = f_tmn / np.linalg.norm(f_tmn)
+    W = np.random.rand(M_modes, m)
+    W = W - np.dot(W, f_unit)[:,np.newaxis] * f_unit
+    w, _ = qr_transpose(W)
+    w = stackv(w, f_unit)
     vst_tmn = np.zeros(m)
 
-    return w, yst_tmn, vst_tmn
+    return w, vst_tmn
 
 
 class Interface:
@@ -23,15 +25,11 @@ class Interface:
     def __init__(self):
         # Q <- w_right:             shape(K+1, M, m)
         # R:                        shape(K+1, M, M)
-        # yst_left <- yst_right:    shape(K+1, m)
         # vst_left <- vst_right:    shape(K+1, m)
-        # by, bv:                   shape(K+1, M)
+        # bv:                   shape(K+1, M)
         self.w_right    = np.array([])
         self.Q          = np.array([])
         self.R          = np.array([])
-        self.yst_right  = np.array([])
-        self.yst_left   = np.array([])
-        self.by         = np.array([])
         self.vst_right  = np.array([])
         self.vst_left   = np.array([])
         self.bv         = np.array([])
@@ -39,25 +37,20 @@ class Interface:
 
     def terminal(self, M_modes, forward):
         # get the right-of-interface values at t = t_n = T
-        assert self.w_right.shape == self.yst_right.shape == self.vst_right.shape == (0,)
-        w_right, yst_right, vst_right = adjoint_terminal_condition(M_modes, forward.f[-1,-1])
+        assert self.w_right.shape == self.vst_right.shape == (0,)
+        w_right, vst_right = adjoint_terminal_condition(
+                M_modes, forward.f[-1,-1])
 
-        Q, R         = qr_transpose(w_right)
-        yst_left, by = remove_orth_projection(yst_right, Q)
+        Q, R = qr_transpose(w_right)
         vst_left, bv = remove_orth_projection(vst_right, Q)
-        assert np.allclose(Q, w_right)
-        assert np.allclose(yst_left, yst_right)
+        assert np.allclose(np.abs(Q), np.abs(w_right))
         assert np.allclose(vst_left, vst_right)
 
         self.w_right    = stackv(w_right,   self.w_right)
-        self.yst_right  = stackv(yst_right, self.yst_right)
         self.vst_right  = stackv(vst_right, self.vst_right)
         self.Q          = stackv(Q,         self.Q)
         self.R          = stackv(R,         self.R)
-        self.yst_left   = stackv(yst_left,  self.yst_left)
-        self.by         = stackv(by,        self.by)
         self.vst_left   = stackv(vst_left,  self.vst_left)
-        self.bv         = stackv(bv,        self.bv)
 
         assert self.w_right.shape[0] == 1
         assert self.w_right.ndim == 3
@@ -67,44 +60,24 @@ class Interface:
         # get the right-of-interface values at t_i < T
         # may not need this function if computer memory is running short
         w_right         = segment.w[0,0]
-        yst_right       = segment.yst[0,0]
         vst_right       = segment.vst[0,0]
         self.w_right    = stackv(w_right,   self.w_right)
-        self.yst_right  = stackv(yst_right, self.yst_right)
         self.vst_right  = stackv(vst_right, self.vst_right)
 
 
-    def rescale(self, f_interface, w_right=None, yst_right=None, vst_right=None):
+    def rescale(self, f_interface, w_right=None, vst_right=None):
         # compute left-of-interface values from right-of-interface values
         if w_right is None:
-            w_right         = self.w_right[0]
-            yst_right       = self.yst_right[0]
-            vst_right       = self.vst_right[0]
+            w_right = self.w_right[0]
+            vst_right = self.vst_right[0]
 
         assert w_right.ndim == 2
-        assert f_interface.ndim == yst_right.ndim == vst_right.ndim == 1
-        # assert np.allclose( np.dot(w_right, f_interface), \
-                # np.zeros(w_right.shape[0]))
+        assert f_interface.ndim == vst_right.ndim == 1
 
-        # for Q, we need to subtract unothorgonal errors
-        Q, R    = qr_transpose(w_right)
-        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]), 
-                atol = 0.2 * np.linalg.norm(f_interface) )
-        Q_      = Q \
-                - ((Q*f_interface[np.newaxis]).sum(axis=-1))[:,np.newaxis] \
-                * f_interface[np.newaxis] \
-                / np.dot(f_interface, f_interface) 
-        assert np.allclose(Q, Q_, atol = 0.2)
-        Q       = Q_
-        assert np.allclose( np.dot(Q, f_interface), np.zeros(Q.shape[0]),
-                atol = 0.2 * np.linalg.norm(f_interface) )
-        
-        yst_left, by = remove_orth_projection(yst_right, Q)
+        Q, R = qr_transpose(w_right)
         vst_left, bv = remove_orth_projection(vst_right, Q)
 
-        self.Q          = stackv(Q,         self.Q)
-        self.R          = stackv(R,         self.R)
-        self.yst_left   = stackv(yst_left,  self.yst_left)
-        self.by         = stackv(by,        self.by)
-        self.vst_left   = stackv(vst_left,  self.vst_left)
-        self.bv         = stackv(bv,        self.bv)
+        self.Q          = stackv(Q, self.Q)
+        self.R          = stackv(R, self.R)
+        self.vst_left   = stackv(vst_left, self.vst_left)
+        self.bv         = stackv(bv, self.bv)

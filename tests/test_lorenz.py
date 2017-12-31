@@ -48,12 +48,12 @@ def test_run_primal(trajectory):
 
 def test_run_adjoint(trajectory):
     u, f, fu, fs, J, Ju, Js = trajectory
-    w_tmn, yst_tmn, vst_tmn = adjoint_terminal_condition(M, f[-1])
-    w, yst, vst = lorenz.run_adjoint(w_tmn, yst_tmn,
+    w_tmn, vst_tmn = adjoint_terminal_condition(M, f[-1])
+    w, vst = lorenz.run_adjoint(w_tmn, 
             vst_tmn, fu, Ju, dt, lorenz.adjoint_step_explicit)
-    assert w.shape[0] == yst.shape[0] == vst.shape[0] == nstep + 1
+    assert w.shape[0] == vst.shape[0] == nstep + 1
     assert w.shape[1] == M
-    assert w.shape[2] == yst.shape[1] == vst.shape[1] == m
+    assert w.shape[2] == vst.shape[1] == m
     # test if w remains orthorgonal to f
     _ =  (w * f[:,np.newaxis,:]).sum(axis=-1)  
     assert np.allclose(_ , np.zeros(_.shape))    
@@ -74,7 +74,7 @@ def trajectory_implicit():
 
 
 def test_run_primal(trajectory_implicit):
-    
+    # the trajectory computed by implicit PTA has a fake stable point    
     u, f, fu, fs, J, Ju, Js = trajectory_implicit
     assert u.shape[0] == f.shape[0] == J.shape[0]  == fu.shape[0] \
             == Ju.shape[0] == fs.shape[0] 
@@ -84,26 +84,16 @@ def test_run_primal(trajectory_implicit):
     assert -40  <= np.average(u[:,0]) <= 40
     assert 10   <= np.average(u[:,2]) <= 100
 
-    fig = plt.figure()
-    plt.plot(u[:,0], u[:,1])
-    plt.savefig('lorenz_x_y.png')
-    plt.close(fig)    
-
-    fig = plt.figure()
-    plt.plot(u[:,0], u[:,2])  
-    plt.savefig('lorenz_x_z.png')
-    plt.close(fig)    
-
 
 def test_run_adjoint(trajectory_implicit):
     u, f, fu, fs, J, Ju, Js = trajectory_implicit
-    w_tmn, yst_tmn, vst_tmn = adjoint_terminal_condition(M, f[-1])
-    w, yst, vst = lorenz.run_adjoint(w_tmn, yst_tmn,
+    w_tmn, vst_tmn = adjoint_terminal_condition(M, f[-1])
+    w, vst = lorenz.run_adjoint(w_tmn, 
             vst_tmn, fu, Ju, dt, lorenz.adjoint_step_implicit)
-    assert w.shape[0] == yst.shape[0] == vst.shape[0] 
-    assert w.shape[2] == yst.shape[1] == vst.shape[1] 
+    assert w.shape[0] == vst.shape[0] 
+    assert w.shape[2] == vst.shape[1] 
     # test if w remains orthorgonal to f
-    _ =  (w * f[:,np.newaxis,:]).sum(axis=-1)  
+    _ =  (w[:,:1] * f[:,np.newaxis,:]).sum(axis=-1)  
     assert np.allclose(_ , np.zeros(_.shape))    
 
 

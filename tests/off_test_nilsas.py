@@ -62,65 +62,6 @@ def vecbd_lorenz_v(vecbd_lorenz_explicit):
     return forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt
 
 
-def test_y(vecbd_lorenz_v):
-    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_v
-    y   = segment.y     # shape(K, nstep_per_segment, m)
-    yst = segment.yst   # shape(K, nstep_per_segment, m)
-    f   = forward.f     # shape(K, nstep_per_segment, m)
-
-    # check continuity and norm
-    assert np.allclose(y[1:,0], y[:-1,-1])
-    ynorm = np.linalg.norm(y.reshape([-1,3]), axis=-1)
-    np.testing.assert_approx_equal(
-            np.average(ynorm[:int(ynorm.shape[0]/2)]),
-            np.average(ynorm[int(ynorm.shape[0]/2):]),
-            significant=1)
-    # check parallel component is the same as yst
-    assert np.allclose((yst*f).sum(-1), (y*f).sum(-1))
-    assert not np.allclose(yst, y)
-    # plot y
-    # fig = plt.figure()
-    # plt.plot(np.linalg.norm(y.reshape([-1,3]), axis=-1))
-    # plt.savefig('ynorm.png')
-    # plt.close(fig)
-
-
-def test_vstpm_dv(vecbd_lorenz_v):
-    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_v
-    vstpm   = segment.vstpm     # shape(K, nstep_per_segment, m)
-    dv      = segment.dv        # shape(K, m)
-    w       = segment.w         # shape(K, nstep_per_segment, M, m)
-    f       = forward.f         # shape(K, nstep_per_segment, m)
-
-    # check shape
-    assert vstpm.shape  == (K_segment, nstep_per_segment+1, m)
-    assert dv.shape     == (K_segment, M_modes)
-
-    # check othogonality of vstpm
-    _   = (vstpm * f).sum(axis=-1)
-    assert np.allclose( _, np.zeros(_.shape) )
-
-    # check dv is inner product
-    assert np.allclose(dv, (w*vstpm[:,:,np.newaxis]).sum((1,3)))
-
-
-def test_vpm(vecbd_lorenz_v):
-    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_v
-    vpm = segment.vpm   # shape(K, nstep_per_segment, m)
-    f   = forward.f     # shape(K, nstep_per_segment, m)
-    
-    # check continuity and norm
-    assert np.allclose(vpm[1:,0], vpm[:-1,-1])
-    vnorm = np.linalg.norm(vpm.reshape([-1,3]), axis=-1)
-    np.testing.assert_approx_equal(
-            np.average(vnorm[:int(vnorm.shape[0]/2)]),
-            np.average(vnorm[int(vnorm.shape[0]/2):]),
-            significant=1)
-    # check orthogonality
-    _   = (vpm * f).sum(axis=-1)
-    assert np.allclose( _, np.zeros(_.shape) )
-    
-
 
 def test_v(vecbd_lorenz_v):
     forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_v

@@ -122,14 +122,12 @@ def adjoint_step_implicit(fu, Ju, adjall, dt):
     return adjall_next
 
 
-def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt, stepfunc):
+def run_adjoint(w_tmn, vst_tmn, fu, Ju, dt, stepfunc):
     # inputs -  w_tmn:      shape (M_modes, m). terminal conditions of homogeneous adjoint
-    #           yst_tmn:    shape (m,). terminal condition of y^*_i
     #           vst_tmn:    shape (m,). terminal condition of v^*_i
     #           fu:         shape (nstep, m, m). Jacobian
     #           Ju:         shape (nstep, m). partial J/ partial u,
     # outputs - w:          shape (nstep, M_modes, m). homogeneous solutions on the segment
-    #           yst:        shape (nstep, m). y^*, for genereating neutral CLV
     #           vst:        shape (nstep, m). inhomogeneous solution
 
     nstep = fu.shape[0] - 1
@@ -137,22 +135,18 @@ def run_adjoint(w_tmn, yst_tmn, vst_tmn, fu, Ju, dt, stepfunc):
     m = w_tmn.shape[1]
 
     w   = [w_tmn]
-    yst = [yst_tmn]
     vst = [vst_tmn]
-    adjall = np.vstack([w_tmn, yst_tmn, vst_tmn])
+    adjall = np.vstack([w_tmn, vst_tmn])
     
     for i in range(nstep-1, -1, -1):
         adjall_next = stepfunc(fu[i], Ju[i], adjall, dt)
-        w.insert(0,adjall_next[:-2])
-        yst.insert(0, adjall_next[-2])
+        w.insert(0,adjall_next[:-1])
         vst.insert(0, adjall_next[-1])
         adjall = adjall_next
 
     w   = np.array(w)
-    yst = np.array(yst)
     vst = np.array(vst)
-
-    return w, yst, vst
+    return w, vst
 
 
 if __name__ == '__main__': # pragma: no cover
