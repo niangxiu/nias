@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import shutil
 import sys
+import pickle
 
 sys.path.append("../")
 from nilsas.nilsas import nilsas_main
@@ -57,45 +58,45 @@ def step_RK4(u, f, fu, rho, dt, sigma):
 
 
 def run_forward(u0, base_parameter, nstep, dt, stepfunc, f0=None):
-    # run_forward is a function in the form
-    # inputs  - u0:     shape (m,). initial state
-    #           nstep:  scalar. number of time steps.
-    #           base_parameter: tuple (rho, sigma). 
-    # outputs - u: shape (nstep, m). m is dymension of  system. Trajectory.
-    #           f: shape (nstep, m). du/dt
-    #           fu: shape (nstep, m, m). Jacobian matrices
-    #           fs: shape (nstep, ns, m). pf/ps
-    #           J: shape (nstep,).
-    #           Ju: shape (nstep, m). pJ/pu
-    #           Js: shape (nstep, ns, m). pJ/ps
-
+    """
+    run_forward is a function in the form
+    Args:
+        u0:     shape (m,). initial state
+        nstep:  scalar. number of time steps.
+        base_parameter: tuple (rho, sigma). 
+    Returns: 
+        u: shape (nstep+1, m). m is dymension of  system. Trajectory.
+        f: shape (nstep+1, m). du/dt
+        fu: shape (nstep+1, m, m). Jacobian matrices
+        fs: shape (nstep+1, ns, m). pf/ps
+        J: shape (nstep+1,).
+        Ju: shape (nstep+1, m). pJ/pu
+        Js: shape (nstep+1, ns). pJ/ps
+    """
     rho, sigma = base_parameter
-    m   = 3
-    ns  = 2 # number of parameters
-
-    assert len(u0) == m
-
-    u   = np.zeros([nstep+1, m])
-    f   = np.zeros([nstep+1, m])
-    fu  = np.zeros([nstep+1, m, m])
-    fs  = np.zeros([nstep+1, ns, m])
-    J   = np.zeros([nstep+1])
-    Ju  = np.zeros([nstep+1, m])
-    Js  = np.zeros([nstep+1, ns, m])
+    m = 3
+    ns = 2 # number of parameters
+    u = np.zeros([nstep+1, m])
+    f = np.zeros([nstep+1, m])
+    fu = np.zeros([nstep+1, m, m])
+    fs = np.zeros([nstep+1, ns, m])
+    J = np.zeros([nstep+1])
+    Ju = np.zeros([nstep+1, m])
+    Js = np.zeros([nstep+1, ns])
     
     # zeroth step value save
-    [x,y,z] = u0
+    assert len(u0) == m
     if f0 is not None:
         assert len(f0) == m
     else:
-        f0  = np.array([sigma*(y-x), x*(rho-z)-y, x*y-beta*z])
+        f0  = dudt(u0, rho, sigma)
     J_, fu_, Ju_, fs_ = derivatives(u0, rho, sigma)
-    u[0]    = u0
-    f[0]    = f0
-    fu[0]   = fu_
-    fs[0]   = fs_
-    J[0]    = J_
-    Ju[0]   = Ju_
+    u[0] = u0
+    f[0] = f0
+    fu[0] = fu_
+    fs[0] = fs_
+    J[0] = J_
+    Ju[0] = Ju_
 
     for i in range(1, 1+nstep):
         u_next, f_next = stepfunc(u[i-1], f[i-1], fu[i-1], rho, dt, sigma)
@@ -149,19 +150,30 @@ def run_adjoint(w_tmn, vst_tmn, fu, Ju, dt, stepfunc):
     return w, vst
 
 
+def u0_rand():
+    u0 = np.zeros(3)
+    for i in range(3):
+        inrange = False
+        while not inrange:
+            u0[i] = (np.random.rand() - 0.5) * 30
+            if abs(u0[i]) > 2:
+                inrange = True
+    return u0
+
+
 if __name__ == '__main__': # pragma: no cover
 
     # parameters (rho, sigma)
-    M_modes = 1
-    nstep_per_segment = 1000
+    M_modes = 2
+    dt = 0.001
+    nstep_per_segment = 200
+    K_segment = 1000
     runup_steps = 10000
-    dt = 0.01
-    K_segment = 2
     rho = 28
     sigma = 10
     u0 = [0,1,2]
     parameter = (rho, sigma)
-    n_repeat = 2
+    n_repeat = 10
 
     Javg_   = []
     grad_   = []
@@ -170,7 +182,8 @@ if __name__ == '__main__': # pragma: no cover
     # Javg, grad, forward, interface, segment = nilsas_main(
             # run_forward, run_adjoint, u0, parameter, M_modes,
             # K_segment, nstep_per_segment, runup_steps, dt, 
-            # step_RK4, adjoint_step_explicit)
+            # step_forward_euler, adjoint_step_explicit)
+    # print(Javg, grad)
     
     # plt.plot((forward.f*segment.y).sum(-1).flat)
     # plt.savefig('fy.png')
@@ -209,33 +222,33 @@ if __name__ == '__main__': # pragma: no cover
     # plt.close(fig)
 
     # plot different trajectory length
-    # K_segment_ = np.array([100], dtype=int) #, 1e3, 2e3, 5e3, 1e4, 2e4])
-    # T_ = K_segment_ * dt * nstep_per_segment
-    # for K_segment, T in zip(K_segment_, T_):
-        # Javg__ = []
-        # grad__ = []
-        # for _ in range(n_repeat):
-            # u0 = np.random.rand(3) * 20
-            # Javg, grad, forward, interface, segment = nilsas_main(
-                # run_forward, run_adjoint, u0, parameter, M_modes,
-                # K_segment, nstep_per_segment, runup_steps, dt, 
-                # step_RK4, adjoint_step_explicit)
-            # print(K_segment, Javg, grad)
-            # Javg__.append(Javg)
-            # grad__.append(grad)
-        # Javg_.append(np.array(Javg__)) 
-        # grad_.append(np.array(grad__))
-    # Javg_ = np.array(Javg_)
-    # grad_ = np.array(grad_)
+    K_segment_ = np.array([1e1, 2e1, 5e1, 1e2, 2e2, 5e2], dtype=int) #, 1e3, 2e3, 5e3, 1e4, 2e4])
+    T_ = K_segment_ * dt * nstep_per_segment
+    for K_segment, T in zip(K_segment_, T_):
+        Javg__ = []
+        grad__ = []
+        for _ in range(n_repeat):
+            u0 = u0_rand()
+            Javg, grad, forward, interface, segment = nilsas_main(
+                run_forward, run_adjoint, u0, parameter, M_modes,
+                K_segment, nstep_per_segment, runup_steps, dt, 
+                step_forward_euler, adjoint_step_explicit)
+            print(T, Javg, grad)
+            Javg__.append(Javg)
+            grad__.append(grad)
+        Javg_.append(np.array(Javg__)) 
+        grad_.append(np.array(grad__))
+    Javg_ = np.array(Javg_)
+    grad_ = np.array(grad_)
 
-    # fig = plt.figure()
-    # plt.semilogx(T_, Javg_, '.')
-    # plt.savefig('T_J.png')
-    # plt.close(fig)
+    fig = plt.figure()
+    plt.semilogx(T_, Javg_, '.')
+    plt.savefig('T_J.png')
+    plt.close(fig)
 
-    # fig = plt.figure()
-    # plt.semilogx(T_, grad_[:,:,0], '.')
-    # plt.savefig('T_grad.png')
-    # plt.close(fig)
+    fig = plt.figure()
+    plt.semilogx(T_, grad_[:,:,0], '.')
+    plt.savefig('T_grad.png')
+    plt.close(fig)
 
-
+    pickle.dump((Javg_, grad_, T_, K_segment_), open("save.p", "wb"))

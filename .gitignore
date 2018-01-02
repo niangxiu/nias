@@ -1,5 +1,6 @@
 *.png
 *.pyc
+*.p
 .coverage
 nilsas/temp/
 nilsas/__pycache__/

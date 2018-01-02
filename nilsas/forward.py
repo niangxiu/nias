@@ -20,12 +20,16 @@ class Forward:
         self.Ju    = []
         self.Js    = []
 
-    def run(self, run_forward, u0, base_parameter, nstep_per_segment, K_segments, runup_steps, dt, stepfunc):
+    def run(self, run_forward, u0, base_parameter, nstep_per_segment,
+            K_segment, runup_steps, dt, stepfunc):
+        # get u0 after runup time
         if runup_steps > 0:
-            u, f0, _, _, _, _, _ = run_forward(u0, base_parameter, runup_steps, dt, stepfunc = stepfunc)
+            u, f0, _, _, _, _, _ = run_forward(u0, base_parameter,
+                    runup_steps, dt, stepfunc = stepfunc)
         u0 = u[-1]
 
-        u, f, fu, fs, J, Ju, Js = run_forward(u0, base_parameter, nstep_per_segment, dt, stepfunc)
+        u, f, fu, fs, J, Ju, Js = run_forward(u0, base_parameter,
+                nstep_per_segment, dt, stepfunc)
         self.u.append(u)
         self.f.append(f)
         self.fu.append(fu)
@@ -33,7 +37,7 @@ class Forward:
         self.J.append(J)
         self.Ju.append(Ju)
         self.Js.append(Js)
-        for i in range(1, K_segments):
+        for i in range(1, K_segment):
             u, f, fu, fs, J, Ju, Js = run_forward(
                     self.u[-1][-1], base_parameter, nstep_per_segment, dt,
                     stepfunc, f0 = self.f[-1][-1],)
@@ -54,3 +58,9 @@ class Forward:
         self.Js = np.array(self.Js)
 
         self.Jtild  = self.J - np.average(self.J)
+
+        assert self.u.shape[:-1] == (K_segment, nstep_per_segment+1)
+        assert self.f.shape[:-1] == (K_segment, nstep_per_segment+1)
+        assert self.u.shape == self.f.shape
+        assert np.allclose(self.u[1:,0], self.u[:-1,-1])
+        assert np.allclose(self.f[1:,0], self.f[:-1,-1])

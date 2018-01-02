@@ -2,16 +2,21 @@ import numpy as np
 from .utility import qr_transpose, remove_orth_projection, stackv
 
 def adjoint_terminal_condition(M_modes, f_tmn):
-    # inputs -  M_modes:    number of homogeneous adjoint
-    #           m:          the dimension of the dynamical system
-    #           f_tmn:      f at the end of the trajectory
-    
+    """
+    Args: 
+        M_modes: number of homogeneous adjoint
+        m: the dimension of the dynamical system
+        f_tmn: f at the end of the trajectory
+    Returns:
+        w: terminal conditions for h-adjoints, the last being direction of f
+        vst: terminal conditions fo i-adjoint, all zeros
+    """
     m = f_tmn.shape[0]
     assert M_modes <= m 
     assert f_tmn.ndim == 1
 
     f_unit = f_tmn / np.linalg.norm(f_tmn)
-    W = np.random.rand(M_modes, m)
+    W = np.random.rand(M_modes-1, m)
     W = W - np.dot(W, f_unit)[:,np.newaxis] * f_unit
     w, _ = qr_transpose(W)
     w = stackv(w, f_unit)
@@ -46,11 +51,12 @@ class Interface:
         assert np.allclose(np.abs(Q), np.abs(w_right))
         assert np.allclose(vst_left, vst_right)
 
-        self.w_right    = stackv(w_right,   self.w_right)
-        self.vst_right  = stackv(vst_right, self.vst_right)
-        self.Q          = stackv(Q,         self.Q)
-        self.R          = stackv(R,         self.R)
-        self.vst_left   = stackv(vst_left,  self.vst_left)
+        self.w_right = stackv(w_right, self.w_right)
+        self.vst_right = stackv(vst_right, self.vst_right)
+        self.Q = stackv(Q, self.Q)
+        self.R = stackv(R, self.R)
+        self.vst_left = stackv(vst_left, self.vst_left)
+        self.bv = stackv(bv, self.bv)
 
         assert self.w_right.shape[0] == 1
         assert self.w_right.ndim == 3

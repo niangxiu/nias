@@ -16,17 +16,22 @@ import apps.lorenz as lorenz
 
 
 def test_nilsas_matrix(vecbd_lorenz_explicit):
-    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
-    ay, C, Cinv, B = nilsas_min( sg.C, itf.R, sg.dy, itf.by ) 
+    fw, itf, sg, M_modes, m, K_segment, nstep_per_segment, dt, ns \
+            = vecbd_lorenz_explicit
+    av, C, Cinv, B \
+            = nilsas_min(sg.C, itf.R, sg.dwv, sg.dwf, sg.dvf, itf.bv) 
 
-    assert B.shape == ((K_segment-1)*M_modes, K_segment*M_modes)
-    assert C.shape == (K_segment*M_modes, K_segment*M_modes)
+    assert av.shape == (K_segment, M_modes)
+    assert C.shape == Cinv.shape == (K_segment*M_modes, K_segment*M_modes)
+    assert B.shape == ((K_segment-1)*M_modes+1, K_segment*M_modes)
+    assert B[-1].size == sg.dwf.size
 
     for i in range(K_segment-1):
         B[i*M_modes:(i+1)*M_modes, i*M_modes:(i+1)*M_modes] \
                 -= np.eye(M_modes)
         B[i*M_modes:(i+1)*M_modes, (i+1)*M_modes:(i+2)*M_modes] \
                 += itf.R[i+1]
+    B[-1] -= sg.dwf.ravel()
     assert np.allclose(B.todense(), np.zeros(B.shape))
 
     for i in range(K_segment):
@@ -39,32 +44,37 @@ def test_nilsas_matrix(vecbd_lorenz_explicit):
 
 
 def test_nilsas_min():
-    C = np.array([[[1]],[[4]]])
-    d = np.array([[2],[6]])
-    R = np.array([[[nan]],[[2]],[[nan]]])
-    b = np.array([[nan],[3],[nan]])
+    #stopped here
+    C = np.array([[[1,0],[0,1]],[[4,0],[0,1]]])
+    dwv = np.array([[1,0],[1,4]])
+    dwf = np.array([[1,1],[3,1]])
+    dvf = np.array([1,2])
+    R = np.array([[[nan,nan],[nan,nan]],[[1,1],[0,2]],[[nan,nan],[nan,nan]]])
+    b = np.array([[nan,nan],[0,1],[nan,nan]])
 
-    a, C_, Cinv, B = nilsas_min( C, R, d, b )
-    assert np.allclose(a, np.array([[-1], [-2]]))
-    assert np.allclose(B.todense(), np.array([1,-2]))
-    assert np.allclose(C_.todense(), np.array([[1,0],[0,4]]))
-    assert np.allclose(Cinv.todense(), np.array([[1,0],[0,0.25]]))
+    a, C_, Cinv, B = nilsas_min( C, R, dwv, dwf, dvf, b )
+    assert np.allclose(B.todense(), 
+            np.array([[1,0,-1,-1],[0,1,0,-2],[1,1,3,1]]))
+    assert np.allclose(C_.todense(), np.diag([1,1,4,1]))
+    assert np.allclose(Cinv.todense(), np.diag([1, 1, 0.25, 1]))
+    assert np.allclose(a, np.array([[-1,-1], [0,-1]]))
 
 
 @pytest.fixture(scope='module')
 def vecbd_lorenz_v(vecbd_lorenz_explicit):
     # provide a vector bundle where the segment has y, vstpm, dv, vpm, v
-    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_explicit
-    ay, _, _, _ = nilsas_min(segment.C, interface.R, segment.dy, interface.by )
-    segment.y_vstpm_dv(ay, forward.f)
-    av, _, _, _ = nilsas_min(segment.C, interface.R, segment.dv, interface.bv)
-    segment.vpm_v(av, forward.f, forward.Jtild)
-    return forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt
+    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment,\
+            dt, ns = vecbd_lorenz_explicit
+    av, _, _, _ = nilsas_min(segment.C, interface.R, segment.dwv, \
+            segment.dwf, segment.dvf, interface.bv)
+    segment.get_v(av, forward.f, forward.Jtild)
+    return forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt, ns
 
 
 
 def test_v(vecbd_lorenz_v):
-    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt = vecbd_lorenz_v
+    forward, interface, segment, M_modes, m, K_segment, nstep_per_segment,\
+            dt, ns = vecbd_lorenz_v
     v = segment.v   # shape(K, nstep_per_segment, m)
 
     # check continuity and norm
@@ -90,7 +100,7 @@ def test_nilsas_main():
     runup_steps = 4000
     dt          = 0.001
     
-    Javg, grad = nilsas_main(
+    Javg, grad, _, _, _ = nilsas_main(
         lorenz.run_forward, lorenz.run_adjoint, u0, parameter, M_modes,
         K_segment, nstep_per_segment, runup_steps, dt, 
         lorenz.step_PTA, lorenz.adjoint_step_explicit)
