@@ -7,7 +7,6 @@ import shutil
 import sys
 import pickle
 import itertools
-from multiprocessing import Pool, current_process
 
 sys.path.append("../")
 from nilsas.nilsas import nilsas_main
@@ -17,7 +16,6 @@ from nilsas.nilsas import nilsas_main
 # the base for sigma is 10
 # the largest time step allowed for PTA forward Euler: dt = 0.001
 beta = 8/3.0
-
 
 def derivatives(u, rho, sigma):
     [x, y, z] = u
@@ -179,29 +177,18 @@ def only_for_J_forwardEuler(u, parameter, nstep, runup_step, dt):
     return J.mean()
 
 
-# parameters (rho, sigma)
-M_modes = 2
-dt = 0.001
-nstep_per_segment = 200
-K_segment = 20
-runup_step = 2000
-rho = 28
-sigma = 10
-parameter = (rho, sigma)
-n_repeat = 4
-
-
-def wrapped(parameter):
-    u0 = u0_rand()
-    Javg, grad, forward, interface, segment = nilsas_main(
-        run_forward, run_adjoint, u0, parameter, M_modes,
-        K_segment, nstep_per_segment, runup_step, dt, 
-        step_forward_euler, adjoint_step_explicit)
-    print(parameter, Javg, grad)
-    return [Javg, grad]
-
-
 if __name__ == '__main__': # pragma: no cover
+
+    # parameters (rho, sigma)
+    M_modes = 2
+    dt = 0.001
+    nstep_per_segment = 200
+    K_segment = 200
+    runup_step = 20000
+    rho = 28
+    sigma = 10
+    parameter = (rho, sigma)
+    n_repeat = 10
 
     # generate all info
     # u0 = u0_rand()
@@ -293,20 +280,30 @@ if __name__ == '__main__': # pragma: no cover
 
 
     # plot two parameters at the same time
+    def wrapper(rho, sig):
+
+    Javg_   = []
+    grad_   = []
     rho_ = np.arange(29, 33.1, 0.5)
     sigma_ = np.arange(8, 12.1, 0.5)
     rho_, sigma_ = np.meshgrid(rho_, sigma_)
-    rho__ = np.repeat(rho_[:, :, np.newaxis], n_repeat, axis=2)
-    sigma__ = np.repeat(sigma_[:, :, np.newaxis], n_repeat, axis=2)
-    # parameters = np.stack((rho__.flatten(), sigma__.flatten()), axis=-1)
-    parameters = np.array(list(zip(rho__.flatten(), sigma__.flatten())))
-    with Pool(processes=4) as pool:
-        results = pool.map(wrapped, parameters)
-    Javg_, grad_ = zip(*results)
-    Javg_ = np.array(Javg_).reshape(rho__.shape)
-    grad_ = np.array(grad_).reshape(rho__.shape+(-1,))
-    print(Javg_.shape)
-    print(grad_.shape)
+    for rho, sigma in zip(rho_.flatten(), sigma_.flatten()):
+        parameter = (rho, sigma)
+        Javg__ = []
+        grad__ = []
+        for _ in range(n_repeat):
+            u0 = u0_rand()
+            Javg, grad, forward, interface, segment = nilsas_main(
+                run_forward, run_adjoint, u0, parameter, M_modes,
+                K_segment, nstep_per_segment, runup_step, dt, 
+                step_forward_euler, adjoint_step_explicit)
+            print(rho, sigma, Javg, grad)
+            Javg__.append(Javg)
+            grad__.append(grad)
+        Javg_.append(np.array(Javg__)) 
+        grad_.append(np.array(grad__))
+    Javg_ = np.array(Javg_).reshape(rho_.shape+(n_repeat,))
+    grad_ = np.array(grad_).reshape(rho_.shape+(n_repeat,-1))
     pickle.dump(
             (Javg_, grad_, rho_, sigma_, M_modes, dt, nstep_per_segment, \
             K_segment, runup_step, n_repeat), \
