@@ -14,8 +14,8 @@ from .segment import Segment
 from .interface import Interface, adjoint_terminal_condition
 
 def vector_bundle(
-        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, dt, stepfwfunc, stepsegfunc):
+        run_forward, run_adjoint, u0, M_modes, K_segment, 
+        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc):
 
     # run_forward is a function in the form
     # inputs  - u0:     shape(m,). init solution.
@@ -40,8 +40,8 @@ def vector_bundle(
     #           vst: shape (nstep, m). inhomogeneous solution
     
     forward = Forward()
-    forward.run(run_forward, u0, parameter, nstep_per_segment, 
-            K_segment,  runup_steps, dt, stepfwfunc)
+    forward.run(run_forward, u0, nstep_per_segment, 
+            K_segment,  runup_steps, stepfwfunc)
     assert not np.isnan(forward.f[-1,-1,0]), \
             'f=du/dt is becoming nan.'
     assert not np.allclose(np.linalg.norm(forward.f[-1,-1,0]), 0, \
@@ -52,7 +52,7 @@ def vector_bundle(
     interface.terminal(M_modes, forward)
 
     for i in range(K_segment-1, -1, -1):
-        segment.run1seg(run_adjoint, interface, forward, dt, stepsegfunc)
+        segment.run1seg(run_adjoint, interface, forward, stepsegfunc)
         interface.interface_right(segment)
         interface.rescale(forward.f[i,0])
 
@@ -112,13 +112,13 @@ def gradient(forward, segment):
 
 
 def nilsas_main(
-        run_forward, run_adjoint, u0, parameter, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, dt, stepfwfunc, stepsegfunc):
+        run_forward, run_adjoint, u0, M_modes, K_segment, 
+        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc):
     
     # get vector bundles
     forward, interface, segment =  vector_bundle( 
-            run_forward, run_adjoint, u0, parameter, M_modes, 
-            K_segment, nstep_per_segment, runup_steps, dt,
+            run_forward, run_adjoint, u0, M_modes, 
+            K_segment, nstep_per_segment, runup_steps,
             stepfwfunc, stepsegfunc)
  
     # solve nilsas problem for v

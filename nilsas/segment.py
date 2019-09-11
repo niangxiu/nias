@@ -49,7 +49,7 @@ class Segment:
         self.dvf = np.array([]) 
 
 
-    def run1seg(self, run_adjoint, interface, forward, dt, stepfunc):
+    def run1seg(self, run_adjoint, interface, forward, stepfunc):
         j_current_segment = -(self.w.shape[0] + 1)
 
         w_tmn = interface.Q[0]
@@ -58,7 +58,7 @@ class Segment:
         Ju = forward.Ju[j_current_segment]
         f = forward.f[j_current_segment]
 
-        w, vst = run_adjoint(w_tmn, vst_tmn, fu, Ju, dt, stepfunc)
+        w, vst = run_adjoint(w_tmn, vst_tmn, fu, Ju, stepfunc)
         C = get_C_cts(w)
         dwv = get_d_cts_wp(w, vst)
         dwf = get_d_cts_wp(w, f)
