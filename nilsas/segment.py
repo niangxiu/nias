@@ -1,5 +1,34 @@
+# the class Segment is for the adjoint quatities on the entire segments
+
 import numpy as np
 from .utility import stackv
+
+
+def get_wvst(w_tmn, vst_tmn, fu, Ju, stepfunc):
+    # inputs -  w_tmn:      shape (M_modes, m). terminal conditions of homogeneous adjoint
+    #           vst_tmn:    shape (m,). terminal condition of v^*_i
+    #           fu:         shape (nstep+1, m, m). Jacobian
+    #           Ju:         shape (nstep+1, m). partial J/ partial u,
+    # outputs - w:          shape (nstep+1, M_modes, m). homogeneous solutions on the segment
+    #           vst:        shape (nstep+1, m). inhomogeneous solution
+    nstep = fu.shape[0] - 1
+    M = w_tmn.shape[0]
+    m = w_tmn.shape[1]
+
+    w   = [w_tmn]
+    vst = [vst_tmn]
+    adjall = np.vstack([w_tmn, vst_tmn])
+    
+    for i in range(nstep-1, -1, -1):
+        adjall_next = stepfunc(fu[i], Ju[i], adjall)
+        w.insert(0,adjall_next[:-1])
+        vst.insert(0, adjall_next[-1])
+        adjall = adjall_next
+
+    w   = np.array(w)
+    vst = np.array(vst)
+    return w, vst
+
 
 def get_C_cts(w):
     # compute the covariant matrix using w on all time steps
@@ -49,7 +78,7 @@ class Segment:
         self.dvf = np.array([]) 
 
 
-    def run1seg(self, run_adjoint, interface, forward, stepfunc):
+    def run1seg(self, interface, forward, stepfunc):
         j_current_segment = -(self.w.shape[0] + 1)
 
         w_tmn = interface.Q[0]
@@ -58,7 +87,7 @@ class Segment:
         Ju = forward.Ju[j_current_segment]
         f = forward.f[j_current_segment]
 
-        w, vst = run_adjoint(w_tmn, vst_tmn, fu, Ju, stepfunc)
+        w, vst = get_wvst(w_tmn, vst_tmn, fu, Ju, stepfunc)
         C = get_C_cts(w)
         dwv = get_d_cts_wp(w, vst)
         dwf = get_d_cts_wp(w, f)
@@ -76,3 +105,5 @@ class Segment:
         assert av.shape == self.dwv.shape
         self.v = self.vst\
                 + (self.w * av[:,np.newaxis,:,np.newaxis]).sum(axis=-2)
+
+

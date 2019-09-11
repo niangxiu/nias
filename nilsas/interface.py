@@ -1,3 +1,5 @@
+# the class Interface is for the adjoint quatities at interfaces
+
 import numpy as np
 from .utility import qr_transpose, remove_orth_projection, stackv
 

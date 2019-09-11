@@ -8,14 +8,14 @@ from copy import deepcopy
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from pdb import set_trace
 
 from .forward import Forward
 from .segment import Segment
 from .interface import Interface, adjoint_terminal_condition
 
-def vector_bundle(
-        run_forward, run_adjoint, u0, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc):
+def vector_bundle(u0, M_modes, K_segment, 
+        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc, derivatives):
 
     # run_forward is a function in the form
     # inputs  - u0:     shape(m,). init solution.
@@ -28,23 +28,11 @@ def vector_bundle(
     #           Ju:     shape (nstep, m). pJ/pu
     #           Js:     shape (nstep, m). pJ/ps
     # Here m is the dimension of the dynamical system
-    #
-    # run_adjoint is a function in the form:
-    # inputs -  w_tmn:      shape (M_modes, m). 
-    #                       Terminal conditions of homogeneous adjoint
-    #           vst_tmn:    shape (m,). Terminal condition of v^*_i
-    #           fu:         shape (nstep, m, m). Jacobian
-    #           Ju:         shape (nstep, m). partial J/ partial u,
-    # outputs - w:          shape (nstep, M_modes, m).
-    #                       homogeneous solutions on the segment
-    #           vst: shape (nstep, m). inhomogeneous solution
     
     forward = Forward()
-    forward.run(run_forward, u0, nstep_per_segment, 
-            K_segment,  runup_steps, stepfwfunc)
-    assert not np.isnan(forward.f[-1,-1,0]), \
-            'f=du/dt is becoming nan.'
-    assert not np.allclose(np.linalg.norm(forward.f[-1,-1,0]), 0, \
+    forward.run_allseg(u0, nstep_per_segment, K_segment,  runup_steps, stepfwfunc, derivatives)
+    assert not np.isnan(forward.f[-1,-1, 0]), 'f=du/dt is becoming nan.'
+    assert not np.allclose(np.linalg.norm(forward.f[-1,-1]), 0, \
             atol=1e-11), 'f=du/dt is becoming zero.'
 
     segment = Segment()
@@ -52,7 +40,7 @@ def vector_bundle(
     interface.terminal(M_modes, forward)
 
     for i in range(K_segment-1, -1, -1):
-        segment.run1seg(run_adjoint, interface, forward, stepsegfunc)
+        segment.run1seg(interface, forward, stepsegfunc)
         interface.interface_right(segment)
         interface.rescale(forward.f[i,0])
 
@@ -111,15 +99,13 @@ def gradient(forward, segment):
     return Javg, grad
 
 
-def nilsas_main(
-        run_forward, run_adjoint, u0, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc):
+def nilsas_main(u0, M_modes, K_segment, 
+        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc, derivatives):
     
     # get vector bundles
     forward, interface, segment =  vector_bundle( 
-            run_forward, run_adjoint, u0, M_modes, 
-            K_segment, nstep_per_segment, runup_steps,
-            stepfwfunc, stepsegfunc)
+            u0, M_modes, K_segment, nstep_per_segment, runup_steps,
+            stepfwfunc, stepsegfunc, derivatives)
  
     # solve nilsas problem for v
     av, _, _, _ = nilsas_min(segment.C, interface.R, segment.dwv,

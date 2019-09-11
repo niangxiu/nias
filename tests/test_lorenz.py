@@ -23,7 +23,7 @@ base_parameter = (30, 10)
 dt      = 0.001
 @pytest.fixture(scope="module")
 def trajectory():
-    return lorenz.run_forward(u0, base_parameter, nstep, dt, lorenz.step_PTA)
+    return lorenz.run_forward(u0, nstep, lorenz.step_PTA)
 
 
 def test_run_primal(trajectory):
@@ -69,8 +69,7 @@ def trajectory_implicit():
     ns      = 2         # number of parameters
     base_parameter = (30, 10)
     dt      = 0.001
-    return lorenz.run_forward(u0, base_parameter, nstep, dt,
-            lorenz.step_PTA_backward_Euler)
+    return lorenz.run_forward(u0, nstep, lorenz.step_PTA_backward_Euler)
 
 
 def test_run_primal(trajectory_implicit):

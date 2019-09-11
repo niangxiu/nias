@@ -1,3 +1,6 @@
+# The Forward class contains all information generated in the feedforward,
+# such as J, f, Ju, u...
+
 import numpy as np
 
 class Forward:
@@ -20,15 +23,14 @@ class Forward:
         self.Ju    = []
         self.Js    = []
 
-    def run(self, run_forward, u0, nstep_per_segment,
-            K_segment, runup_steps, stepfunc):
+
+    def run_allseg(self, u0, nstep_per_segment, K_segment, runup_steps, stepfunc, derivatives):
         # get u0 after runup time
         if runup_steps > 0:
-            u, f0, _, _, _, _, _ = run_forward(u0, runup_steps, stepfunc = stepfunc)
+            u, _, _, _, _, _, _ = self.run1seg(u0, runup_steps, stepfunc, derivatives)
         u0 = u[-1]
 
-        u, f, fu, fs, J, Ju, Js = run_forward(u0,
-                nstep_per_segment, stepfunc)
+        u, f, fu, fs, J, Ju, Js = self.run1seg(u0, nstep_per_segment, stepfunc, derivatives)
         self.u.append(u)
         self.f.append(f)
         self.fu.append(fu)
@@ -37,9 +39,7 @@ class Forward:
         self.Ju.append(Ju)
         self.Js.append(Js)
         for i in range(1, K_segment):
-            u, f, fu, fs, J, Ju, Js = run_forward(
-                    self.u[-1][-1],  nstep_per_segment,
-                    stepfunc, f0 = self.f[-1][-1],)
+            u, f, fu, fs, J, Ju, Js = self.run1seg(self.u[-1][-1], nstep_per_segment, stepfunc, derivatives)
             self.u.append(u)
             self.f.append(f)
             self.fu.append(fu)
@@ -63,3 +63,45 @@ class Forward:
         assert self.u.shape == self.f.shape
         assert np.allclose(self.u[1:,0], self.u[:-1,-1])
         assert np.allclose(self.f[1:,0], self.f[:-1,-1])
+
+
+
+    def run1seg(self, u0, nstep, stepfunc, derivatives):
+        """
+        Args:
+            u0:     shape (m,). initial state
+            nstep:  scalar. number of time steps.
+            base_parameter: tuple (rho, sigma). 
+        Returns: 
+            u: shape (nstep+1, m). m is dymension of  system. Trajectory.
+            f: shape (nstep+1, m). du/dt
+            fu: shape (nstep+1, m, m). Jacobian matrices
+            fs: shape (nstep+1, ns, m). pf/ps
+            J: shape (nstep+1,).
+            Ju: shape (nstep+1, m). pJ/pu
+            Js: shape (nstep+1, ns). pJ/ps
+        """
+        m = 3
+        ns = 2 # number of parameters
+        u = np.zeros([nstep+1, m])
+        f = np.zeros([nstep+1, m])
+        fu = np.zeros([nstep+1, m, m])
+        fs = np.zeros([nstep+1, ns, m])
+        J = np.zeros([nstep+1])
+        Ju = np.zeros([nstep+1, m])
+        Js = np.zeros([nstep+1, ns])
+        assert len(u0) == m
+        
+        for i in range(1+nstep):
+            if i == 0:
+                u[i] = u0
+            else:
+                u[i] = stepfunc(u[i-1], f[i-1], fu[i-1])
+            f_, J_, fu_, Ju_, fs_ = derivatives(u[i])
+            f[i]    = f_
+            fu[i]   = fu_
+            fs[i]   = fs_
+            J[i]    = J_
+            Ju[i]   = Ju_
+
+        return u, f, fu, fs, J, Ju, Js
