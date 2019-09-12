@@ -15,7 +15,7 @@ from .segment import Segment
 from .interface import Interface, adjoint_terminal_condition
 
 def vector_bundle(u0, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc, derivatives):
+        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc, derivatives, dudt):
 
     # run_forward is a function in the form
     # inputs  - u0:     shape(m,). init solution.
@@ -30,7 +30,7 @@ def vector_bundle(u0, M_modes, K_segment,
     # Here m is the dimension of the dynamical system
     
     forward = Forward()
-    forward.run_allseg(u0, nstep_per_segment, K_segment,  runup_steps, stepfwfunc, derivatives)
+    forward.run_allseg(u0, nstep_per_segment, K_segment,  runup_steps, stepfwfunc, derivatives, dudt)
     assert not np.isnan(forward.f[-1,-1, 0]), 'f=du/dt is becoming nan.'
     assert not np.allclose(np.linalg.norm(forward.f[-1,-1]), 0, \
             atol=1e-11), 'f=du/dt is becoming zero.'
@@ -100,12 +100,12 @@ def gradient(forward, segment):
 
 
 def nilsas_main(u0, M_modes, K_segment, 
-        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc, derivatives):
+        nstep_per_segment, runup_steps, stepfwfunc, stepsegfunc, derivatives, dudt):
     
     # get vector bundles
     forward, interface, segment =  vector_bundle( 
             u0, M_modes, K_segment, nstep_per_segment, runup_steps,
-            stepfwfunc, stepsegfunc, derivatives)
+            stepfwfunc, stepsegfunc, derivatives, dudt)
  
     # solve nilsas problem for v
     av, _, _, _ = nilsas_min(segment.C, interface.R, segment.dwv,

@@ -24,13 +24,13 @@ class Forward:
         self.Js    = []
 
 
-    def run_allseg(self, u0, nstep_per_segment, K_segment, runup_steps, stepfunc, derivatives):
+    def run_allseg(self, u0, nstep_per_segment, K_segment, runup_steps, stepfunc, derivatives, dudt):
         # get u0 after runup time
         if runup_steps > 0:
-            u, _, _, _, _, _, _ = self.run1seg(u0, runup_steps, stepfunc, derivatives)
+            u, _, _, _, _, _, _ = self.run1seg(u0, runup_steps, stepfunc, derivatives, dudt)
         u0 = u[-1]
 
-        u, f, fu, fs, J, Ju, Js = self.run1seg(u0, nstep_per_segment, stepfunc, derivatives)
+        u, f, fu, fs, J, Ju, Js = self.run1seg(u0, nstep_per_segment, stepfunc, derivatives, dudt)
         self.u.append(u)
         self.f.append(f)
         self.fu.append(fu)
@@ -39,7 +39,7 @@ class Forward:
         self.Ju.append(Ju)
         self.Js.append(Js)
         for i in range(1, K_segment):
-            u, f, fu, fs, J, Ju, Js = self.run1seg(self.u[-1][-1], nstep_per_segment, stepfunc, derivatives)
+            u, f, fu, fs, J, Ju, Js = self.run1seg(self.u[-1][-1], nstep_per_segment, stepfunc, derivatives, dudt)
             self.u.append(u)
             self.f.append(f)
             self.fu.append(fu)
@@ -66,7 +66,7 @@ class Forward:
 
 
 
-    def run1seg(self, u0, nstep, stepfunc, derivatives):
+    def run1seg(self, u0, nstep, stepfunc, derivatives, dudt):
         """
         Args:
             u0:     shape (m,). initial state
@@ -95,13 +95,9 @@ class Forward:
         for i in range(1+nstep):
             if i == 0:
                 u[i] = u0
+                f[i] = dudt(u0)
             else:
-                u[i] = stepfunc(u[i-1], f[i-1], fu[i-1])
-            f_, J_, fu_, Ju_, fs_ = derivatives(u[i])
-            f[i]    = f_
-            fu[i]   = fu_
-            fs[i]   = fs_
-            J[i]    = J_
-            Ju[i]   = Ju_
+                u[i], f[i] = stepfunc(u[i-1], f[i-1], fu[i-1])
+            J[i], fu[i], Ju[i], fs[i] = derivatives(u[i])
 
         return u, f, fu, fs, J, Ju, Js

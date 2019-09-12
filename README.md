@@ -5,5 +5,5 @@
 
 # NILSAS: Non-Intrusive Least Squares Adjoint Shadowing
 
-This is the adjoint shadowing method which uses only the adjoint solvers.
-
+This code accompanies the paper "Adjoint sensitivity analysis on chaotic dynamical systems by Non-Intrusive Least Squares Adjoint Shadowing (NILSAS)",
+Angxiu Ni, Chaitanya Talnikar, Journal of Computational Physics, Volume 395, Pages 690-709, 2019,

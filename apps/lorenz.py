@@ -30,13 +30,12 @@ def dudt(u):
 
 
 def derivatives(u):
-    f = dudt(u)
     [x, y, z] = u
     J   = z
     fu  = np.array([[-sigma, sigma, 0], [rho - z, -1, -x], [y, x, -beta]])
     Ju  = np.array([0, 0, 1])
     fs  = np.array([[0, x, 0], [y-x, 0, 0]])
-    return f, J, fu, Ju, fs
+    return J, fu, Ju, fs
 
 
 def step_PTA(u, f, fu):
@@ -53,7 +52,7 @@ def step_PTA_backward_Euler(u, f, fu):
 
 def step_forward_euler(u, f, fu):
     u_next = u + f * dt
-    return u_next
+    return u_next, dudt(u_next)
 
 
 def step_RK4(u, f, fu):
@@ -62,7 +61,7 @@ def step_RK4(u, f, fu):
     k2 = dt * dudt(u + 0.5 * k1, rho, sigma)
     k3 = dt * dudt(u + k2, rho, sigma)
     u_next = u + (k0 + 2*k1 + 2*k2 + k3) / 6.0
-    return u_next
+    return u_next, dudt(u_next)
 
 
 def adjoint_step_explicit(fu, Ju, adjall):
@@ -107,7 +106,7 @@ def wrapped_nilsasmain(i_repeat):
     u0 = u0_rand()
     Javg, grad, forward, interface, segment = nilsas_main(u0, M_modes,
         K_segment, nstep_per_segment, runup_step,
-        step_forward_euler, adjoint_step_explicit, derivatives)
+        step_forward_euler, adjoint_step_explicit, derivatives, dudt)
     print(rho, sigma, Javg, grad)
     return [Javg, grad]
 
@@ -117,7 +116,7 @@ def all_info():
     u0 = u0_rand()
     Javg, grad, forward, interface, segment = nilsas_main(
         u0, M_modes, K_segment, nstep_per_segment, runup_step, 
-        step_forward_euler, adjoint_step_explicit)
+        step_forward_euler, adjoint_step_explicit, derivatives, dudt)
     pickle.dump((Javg, grad, forward, interface, segment, dt, K_segment,
             nstep_per_segment),\
             open("all_info_segment.p", "wb"))
@@ -136,7 +135,7 @@ def change_rho():
             u0 = u0_rand()
             Javg, grad, forward, interface, segment = nilsas_main(
                 u0, M_modes, K_segment, nstep_per_segment, runup_step, 
-                step_forward_euler, adjoint_step_explicit, derivatives)
+                step_forward_euler, adjoint_step_explicit, derivatives, dudt)
             print(rho, Javg, grad)
             Javg__.append(Javg)
             grad__.append(grad)
@@ -184,7 +183,7 @@ def converge_T():
             Javg, grad, forward, interface, segment = nilsas_main(
                 u0, M_modes,
                 K_segment, nstep_per_segment, runup_step, 
-                step_forward_euler, adjoint_step_explicit)
+                step_forward_euler, adjoint_step_explicit, derivatives, dudt)
             print(T, Javg, grad)
             Javg__.append(Javg)
             grad__.append(grad)
