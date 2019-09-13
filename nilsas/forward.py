@@ -7,13 +7,13 @@ class Forward:
 
     def __init__(self):
         # there is 1 objective and ns parameters
-        # u:    shape(K, nstep_per_segment, m)
-        # f:    shape(K, nstep_per_segment, m)
-        # fu:   shape(K, nstep_per_segment, m, m)
-        # fs:   shape(K, nstep_per_segment, ns, m)
-        # J:    shape(K, nstep_per_segment,)
-        # Ju:   shape(K, nstep_per_segment, m)
-        # Js:   shape(K, nstep_per_segment, ns)
+        # u:    shape(K, nstep_per_segment+1, m)
+        # f:    shape(K, nstep_per_segment+1, m)
+        # fu:   shape(K, nstep_per_segment+1, m, m)
+        # fs:   shape(K, nstep_per_segment+1, ns, m)
+        # J:    shape(K, nstep_per_segment+1,)
+        # Ju:   shape(K, nstep_per_segment+1, m)
+        # Js:   shape(K, nstep_per_segment+1, ns)
         self.u     = []
         self.f     = []
         self.fu    = []

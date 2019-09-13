@@ -18,8 +18,8 @@ n_repeat = 4
 dt = 0.001 # largest step allowed for PTA forward Euler: dt = 0.001
 nstep_per_segment = 200
 M_modes = 2
-K_segment = 20
-runup_step = 2000
+K_segment = 200
+runup_step = 10000
 rho = 28
 sigma = 10
 
@@ -108,7 +108,7 @@ def wrapped_nilsasmain(i_repeat):
         K_segment, nstep_per_segment, runup_step,
         step_forward_euler, adjoint_step_explicit, derivatives, dudt)
     print(rho, sigma, Javg, grad)
-    return [Javg, grad]
+    return Javg, grad, forward, interface, segment
 
 
 def all_info():
@@ -207,7 +207,7 @@ def contour():
         for sigma in sigma_:
             with Pool(processes=4) as pool:
                 results = pool.map(wrapped_nilsasmain, range(n_repeat))
-            Javg, grad = zip(*results)
+            Javg, grad, _, _, _ = zip(*results)
             Javg_.append(Javg)
             grad_.append(grad)
     Javg_ = np.array(Javg_).reshape((len(rho_), len(sigma_), n_repeat))
@@ -247,9 +247,9 @@ def contour_J():
 
 if __name__ == '__main__': # pragma: no cover
     # all_info()
-    contour()
+    # contour()
     # contour_J()
-    # change_rho()
+    change_rho()
     # change_rho_onlyP_J()
     pass
 

@@ -35,7 +35,7 @@ def vector_bundle(u0, M_modes, K_segment,
     assert not np.allclose(np.linalg.norm(forward.f[-1,-1]), 0, \
             atol=1e-11), 'f=du/dt is becoming zero.'
 
-    segment = Segment()
+    segment = Segment(forward)
     interface = Interface()
     interface.terminal(M_modes, forward)
 
@@ -92,9 +92,10 @@ def gradient(forward, segment):
     # computes the gradient from checkpoints
     # inputs -  segment_range: the checkpoints to be used for sensitivity
     K_segment, nstep_per_segment, _ = forward.f.shape
-    grad = (segment.v[:,:,np.newaxis,:] * forward.fs).sum((0,1,3)) \
+    nstep_per_segment -= 1
+    grad = (segment.v[:,:,np.newaxis,:] * forward.fs * segment.weight[np.newaxis,:,np.newaxis,np.newaxis]).sum((0,1,3)) \
             / K_segment / nstep_per_segment
-    grad += forward.Js.sum((0,1)) / K_segment / nstep_per_segment
+    grad += (forward.Js * segment.weight[np.newaxis,:,np.newaxis]).sum((0,1)) / K_segment / nstep_per_segment
     Javg = np.average(forward.J)
     return Javg, grad
 
