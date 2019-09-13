@@ -101,8 +101,7 @@ def test_nilsas_main():
     dt          = 0.001
     
     Javg, grad, _, _, _ = nilsas_main(
-        lorenz.run_forward, lorenz.run_adjoint, u0, parameter, M_modes,
-        K_segment, nstep_per_segment, runup_steps, dt, 
-        lorenz.step_PTA, lorenz.adjoint_step_explicit)
+        u0, M_modes, K_segment, nstep_per_segment, runup_steps,
+        lorenz.step_PTA, lorenz.adjoint_step_explicit, lorenz.derivatives, lorenz.dudt)
 
     assert 0.8 <= grad[0] <= 1.2

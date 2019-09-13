@@ -1,6 +1,6 @@
 # The Forward class contains all information generated in the feedforward,
 # such as J, f, Ju, u...
-
+from pdb import set_trace
 import numpy as np
 
 class Forward:
@@ -39,7 +39,7 @@ class Forward:
         self.Ju.append(Ju)
         self.Js.append(Js)
         for i in range(1, K_segment):
-            u, f, fu, fs, J, Ju, Js = self.run1seg(self.u[-1][-1], nstep_per_segment, stepfunc, derivatives, dudt)
+            u, f, fu, fs, J, Ju, Js = self.run1seg(self.u[-1][-1], nstep_per_segment, stepfunc, derivatives, dudt, f0=self.f[-1][-1])
             self.u.append(u)
             self.f.append(f)
             self.fu.append(fu)
@@ -65,8 +65,7 @@ class Forward:
         assert np.allclose(self.f[1:,0], self.f[:-1,-1])
 
 
-
-    def run1seg(self, u0, nstep, stepfunc, derivatives, dudt):
+    def run1seg(self, u0, nstep, stepfunc, derivatives, dudt, f0=None):
         """
         Args:
             u0:     shape (m,). initial state
@@ -95,7 +94,10 @@ class Forward:
         for i in range(1+nstep):
             if i == 0:
                 u[i] = u0
-                f[i] = dudt(u0)
+                if f0 is None:
+                    f[i] = dudt(u0)
+                else:
+                    f[i] = f0
             else:
                 u[i], f[i] = stepfunc(u[i-1], f[i-1], fu[i-1])
             J[i], fu[i], Ju[i], fs[i] = derivatives(u[i])

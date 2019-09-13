@@ -49,9 +49,8 @@ def vecbd_lorenz_explicit():
     ns = 2
 
     forward, interface, segment =  vector_bundle( 
-           lorenz.run_forward, lorenz.run_adjoint, u0, parameter, 
-           M_modes, K_segment, nstep_per_segment, runup_steps, dt,
-           lorenz.step_PTA, lorenz.adjoint_step_explicit)
+           u0, M_modes, K_segment, nstep_per_segment, runup_steps,
+           lorenz.step_PTA, lorenz.adjoint_step_explicit, lorenz.derivatives, lorenz.dudt)
 
     return forward, interface, segment, M_modes, m, K_segment, nstep_per_segment, dt, ns
 
