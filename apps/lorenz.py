@@ -13,16 +13,6 @@ from pdb import set_trace
 sys.path.append("../")
 from nilsas.nilsas import nilsas_main
 
-beta = 8/3.0
-n_repeat = 4
-dt = 0.001 # largest step allowed for PTA forward Euler: dt = 0.001
-nstep_per_segment = 200
-M_modes = 2
-K_segment = 200
-runup_step = 10000
-rho = 28
-sigma = 10
-
 
 def dudt(u):
     [x, y, z] = u
@@ -101,14 +91,107 @@ def only_for_J_forwardEuler(u, nstep, runup_step):
     return J.mean()
 
 
-def wrapped_nilsasmain(i_repeat):
-    np.random.seed()
-    u0 = u0_rand()
-    Javg, grad, forward, interface, segment = nilsas_main(u0, M_modes,
-        K_segment, nstep_per_segment, runup_step,
-        step_forward_euler, adjoint_step_explicit, derivatives, dudt)
-    print(rho, sigma, Javg, grad)
-    return Javg, grad, forward, interface, segment
+def wrapped_nilsasmain(keep_array=False): 
+    u0s = [u0_rand() for i in range(n_repeat)]
+    arguments = [(u0, M_modes, K_segment, nstep_per_segment, runup_step,
+            step_forward_euler, adjoint_step_explicit, derivatives, dudt) for u0 in u0s]
+    with Pool(processes=n_repeat) as pool:
+        results = pool.starmap(nilsas_main, arguments)
+    Javg_, grad_, forward_, interface_, segment_ = zip(*results)
+    [print(rho, sigma, Javg, grad) for Javg,grad in zip(Javg_,grad_)]
+    if keep_array:
+        return np.array(Javg_), np.array(grad_)
+    else: 
+        return np.mean(Javg_), np.mean(grad_, axis=0)
+
+
+def wrapped_onlyJ(keep_array=False):
+    u0s = [u0_rand() for i in range(n_repeat)]
+    arguments = [(u0, nstep_only_J, runup_step) for u0 in u0s]
+    with Pool(processes=n_repeat) as pool:
+        results = pool.starmap(only_for_J_forwardEuler, arguments)
+    print(rho, sigma, results)
+    if keep_array:
+        return np.array(results)
+    else:
+        return np.mean(results)
+
+
+def converge_T():
+    # convergence of gradient to different trajectory length
+    global K_segment
+    Javg_   = []
+    grad_   = []
+    K_segment_ = np.array([1e1, 2e1, 5e1, 1e2, 2e2, 5e2], dtype=int) 
+    T_ = K_segment_ * dt * nstep_per_segment
+    for K_segment in K_segment_:
+        Javg, grad = wrapped_nilsasmain(keep_array=True)
+        Javg_.append(Javg) 
+        grad_.append(grad)
+        print(K_segment, Javg, grad)
+    pickle.dump((Javg_, grad_, T_, K_segment_, rho, sigma, M_modes, dt, \
+            nstep_per_segment, K_segment, runup_step, n_repeat), \
+            open("change_T.p", "wb"))
+
+        
+def contour():
+    # plot two parameters at the same time
+    global rho, sigma
+    rho_ = np.arange(29, 33.1, 1)
+    sigma_ = np.arange(8, 12.1, 1)
+    Javg_ = []
+    grad_ = []
+    for rho in rho_:
+        for sigma in sigma_:
+            Javg, grad = wrapped_nilsasmain()
+            Javg_.append(Javg)
+            grad_.append(grad)
+    Javg_ = np.array(Javg_).reshape((len(rho_), len(sigma_)))
+    grad_ = np.array(grad_).reshape(Javg_.shape+(-1,))
+    print(Javg_.shape)
+    print(grad_.shape)
+    pickle.dump((Javg_, grad_, rho_, sigma_, M_modes, dt, nstep_per_segment, \
+            K_segment, runup_step, n_repeat), open("rho_sig.p", "wb"))
+   
+
+def contour_J():
+    # only compute objective byt not gradient
+    global rho, sigma
+    Javg_   = []
+    rho_ = np.arange(28.5, 33.51, 0.5)
+    sigma_ = np.arange(7.5, 12.51, 0.5)
+    for rho in rho_:
+        for sigma in sigma_:
+            Javg_.append(wrapped_onlyJ()) 
+    Javg_ = np.array(Javg_).reshape((len(rho_), len(sigma_)))
+    pickle.dump((Javg_, rho_, sigma_, M_modes, dt, nstep_only_J, \
+            K_segment, runup_step, n_repeat), open("onlyJ_rho_sig.p", "wb"))    
+
+    
+def change_rho():
+    # grad for different rho
+    global rho
+    Javg_   = []
+    grad_   = []
+    rho_ = np.arange(25, 50.1, 1)
+    for rho in rho_:
+        Javg, grad = wrapped_nilsasmain(keep_array=True)
+        Javg_.append(Javg) 
+        grad_.append(grad)
+    pickle.dump((Javg_, grad_, rho_, sigma, M_modes, dt, \
+            nstep_per_segment, K_segment, runup_step, n_repeat), \
+            open("change_rho.p", "wb"))
+
+
+def change_rho_J():
+    global rho
+    Javg_   = []
+    rho_ = np.arange(24.75, 50.31, 0.5) 
+    for rho in rho_:
+        Javg_.append(wrapped_onlyJ(keep_array=True)) 
+    pickle.dump((Javg_, rho_, sigma, M_modes, dt,\
+            nstep_only_J, K_segment, runup_step, n_repeat), \
+            open("onlyJ_change_rho.p", "wb"))    
 
 
 def all_info():
@@ -118,138 +201,27 @@ def all_info():
         u0, M_modes, K_segment, nstep_per_segment, runup_step, 
         step_forward_euler, adjoint_step_explicit, derivatives, dudt)
     pickle.dump((Javg, grad, forward, interface, segment, dt, K_segment,
-            nstep_per_segment),\
-            open("all_info_segment.p", "wb"))
+            nstep_per_segment), open("all_info_segment.p", "wb"))
 
 
-def change_rho():
-    # grad for different rho
-    global rho
-    Javg_   = []
-    grad_   = []
-    rho_ = np.arange(25, 28, 1) 
-    for rho in rho_:
-        Javg__ = []
-        grad__ = []
-        for _ in range(n_repeat):
-            u0 = u0_rand()
-            Javg, grad, forward, interface, segment = nilsas_main(
-                u0, M_modes, K_segment, nstep_per_segment, runup_step, 
-                step_forward_euler, adjoint_step_explicit, derivatives, dudt)
-            print(rho, Javg, grad)
-            Javg__.append(Javg)
-            grad__.append(grad)
-        Javg_.append(np.array(Javg__)) 
-        grad_.append(np.array(grad__))
-    Javg_ = np.array(Javg_)
-    grad_ = np.array(grad_)
-    pickle.dump((Javg_, grad_, rho_, sigma, M_modes, dt, \
-            nstep_per_segment, K_segment, runup_step, n_repeat), \
-            open("change_rho.p", "wb"))
 
+beta = 8/3.0
+n_repeat = 4
+dt = 0.001 # largest step allowed for PTA forward Euler: dt = 0.001
+nstep_per_segment = 200
+M_modes = 2
+K_segment = 200
+runup_step = 10000
+rho = 28
+sigma = 10
+nstep_only_J = 10000
 
-def change_rho_onlyP_J():
-    global rho
-    Javg_   = []
-    runup_step = 4000
-    nstep = 10000
-    n_repeat = 1
-    rho_ = np.arange(24.75, 50.31, 1) 
-    for rho in rho_:
-        Javg__ = []
-        for _ in range(n_repeat):
-            u0 = u0_rand()
-            Javg = only_for_J_forwardEuler(u0, nstep, runup_step)
-            print(rho, Javg)
-            Javg__.append(Javg)
-        Javg_.append(np.array(Javg__)) 
-    Javg_ = np.array(Javg_)
-    pickle.dump((Javg_, rho_, sigma, M_modes, dt,\
-            nstep, K_segment, runup_step, n_repeat), \
-            open("onlyJ_change_rho.p", "wb"))    
-
-
-def converge_T():
-    # convergence of gradient to different trajectory length
-    Javg_   = []
-    grad_   = []
-    K_segment_ = np.array([1e1, 2e1, 5e1, 1e2, 2e2, 5e2, 1e3, 2e3], dtype=int) 
-    T_ = K_segment_ * dt * nstep_per_segment
-    for K_segment, T in zip(K_segment_, T_):
-        Javg__ = []
-        grad__ = []
-        for _ in range(n_repeat):
-            u0 = u0_rand()
-            Javg, grad, forward, interface, segment = nilsas_main(
-                u0, M_modes,
-                K_segment, nstep_per_segment, runup_step, 
-                step_forward_euler, adjoint_step_explicit, derivatives, dudt)
-            print(T, Javg, grad)
-            Javg__.append(Javg)
-            grad__.append(grad)
-        Javg_.append(np.array(Javg__)) 
-        grad_.append(np.array(grad__))
-    Javg_ = np.array(Javg_)
-    grad_ = np.array(grad_)
-    pickle.dump((Javg_, grad_, T_, K_segment_, rho, sigma, M_modes, dt, \
-            nstep_per_segment, K_segment, runup_step, n_repeat), \
-            open("changeK.p", "wb"))
-
-        
-def contour():
-    # plot two parameters at the same time
-    global rho, sigma
-    rho_ = np.arange(29, 33.1, 1)
-    sigma_ = np.arange(8, 11.1, 1)
-    Javg_ = []
-    grad_ = []
-    for rho in rho_:
-        for sigma in sigma_:
-            with Pool(processes=4) as pool:
-                results = pool.map(wrapped_nilsasmain, range(n_repeat))
-            Javg, grad, _, _, _ = zip(*results)
-            Javg_.append(Javg)
-            grad_.append(grad)
-    Javg_ = np.array(Javg_).reshape((len(rho_), len(sigma_), n_repeat))
-    grad_ = np.array(grad_).reshape(Javg_.shape+(-1,))
-    print(Javg_.shape)
-    print(grad_.shape)
-    pickle.dump(
-            (Javg_, grad_, rho_, sigma_, M_modes, dt, nstep_per_segment, \
-            K_segment, runup_step, n_repeat), \
-            open("rho_sig.p", "wb"))
-   
-
-def contour_J():
-    # only compute objective byt not gradient
-    global rho, sigma
-    Javg_   = []
-    rho_ = np.arange(28.75, 33.3, 0.5)
-    sigma_ = np.arange(7.75, 12.3, 0.5)
-    rho_, sigma_ = np.meshgrid(rho_, sigma_)
-    runup_step = 4000
-    nstep = 10000
-    n_repeat = 1
-    for rho, sigma in zip(rho_.flatten(), sigma_.flatten()):
-        Javg__ = []
-        for _ in range(n_repeat):
-            u0 = u0_rand()
-            Javg = only_for_J_forwardEuler(u0, nstep, runup_step)
-            print(rho, sigma, Javg)
-            Javg__.append(Javg)
-        Javg_.append(np.array(Javg__)) 
-    Javg_ = np.array(Javg_).reshape(rho_.shape+(n_repeat,))
-    pickle.dump(
-            (Javg_, rho_, sigma_, M_modes, dt, nstep, \
-            K_segment, runup_step, n_repeat), \
-            open("onlyJ_rho_sig.p", "wb"))    
-    
 
 if __name__ == '__main__': # pragma: no cover
-    # all_info()
+    # converge_T()
     # contour()
     # contour_J()
-    change_rho()
-    # change_rho_onlyP_J()
+    # change_rho()
+    # change_rho_J()
+    all_info()
     pass
-
